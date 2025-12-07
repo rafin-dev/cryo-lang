@@ -1,5 +1,5 @@
-# CryoCompiler
-Cryo is a general purpose, 
+# Cryo
+Cryo is a general purpose programming language
 
 ## Error code list
 - EA1000: Assembly file does not exist

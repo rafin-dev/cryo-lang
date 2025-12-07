@@ -2,7 +2,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "Assembler/Assembler.h"
+#include "assembler/Assembler.h"
 
 int main(int argc, const char** argv)
 {

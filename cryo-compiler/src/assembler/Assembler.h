@@ -1,14 +1,12 @@
 #pragma once
 
 #include "Token.h"
-#include "Common/Error.h"
+#include "common/Error.h"
 #include "Instructions.h"
 
-#include <optional>
-#include <queue>
 #include <filesystem>
 #include <unordered_map>
-#include <unordered_set>
+#include <set>
 
 namespace Cryo::Assembler {
 

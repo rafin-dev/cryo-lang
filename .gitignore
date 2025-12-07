@@ -3,6 +3,7 @@
 **/bin-int/
 **/obj/
 
+compile_commands.json
 Makefile
 .vs/
 **.vscode/
