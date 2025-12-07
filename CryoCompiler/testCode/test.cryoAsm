@@ -1,0 +1,11 @@
+fn $main %void -> %void
+{
+	PUSH 2;
+	CALL $void::test::void;
+	RETURN;
+}
+
+fn $test %void -> %void
+{
+	RETURN;
+}

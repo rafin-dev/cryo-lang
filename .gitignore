@@ -1,0 +1,12 @@
+/build
+**/bin/
+**/bin-int/
+**/obj/
+
+Makefile
+.vs/
+**.vscode/
+**.sln
+**.vcxproj
+**.user
+**.filters

@@ -1,0 +1,19 @@
+#pragma once
+
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <list>
+#include <stack>
+#include <queue>
+#include <map>
+#include <unordered_map>
+#include <set>
+#include <unordered_set>
+#include <memory>
+
+#include <filesystem>
+#include <algorithm>
+#include <iostream>
+#include <optional>
