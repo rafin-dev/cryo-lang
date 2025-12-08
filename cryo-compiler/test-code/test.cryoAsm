@@ -1,8 +1,9 @@
 fn $main %void -> %void
 {
-	PUSH 2;
+	PUSH 4 $uint32_a;
 	CALL $void::test::void;
-	RETURN;
+  POP 1;
+  RETURN;
 }
 
 fn $test %void -> %void

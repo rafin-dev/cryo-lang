@@ -1,8 +1,6 @@
 #include "cryopch.h"
 #include "core/CryoState.h"
 
-#include <iostream>
-
 int main(int argc, const char* argv[])
 {
 	Cryo::CryoState state = Cryo::CryoState(argc - 1, argv + 1); // Ignore default argument with the exe's filepath

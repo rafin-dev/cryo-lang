@@ -43,11 +43,25 @@ namespace Cryo {
 						return;
 					}
 					m_StackCounter -= size;
+          m_StackEntries.push(size);
 
 					std::cout << "Pushing [" << size << "] into the stack!" << std::endl;
 
 					break;
 				}
+
+      case POP:
+        {
+          m_ProgramCounter++;
+
+          uint32_t count = *m_ProgramCounter;
+          std::cout << "Poping [" << count << "] entries from the stack!" << std::endl;
+          for (uint32_t i = 0; i < count; i++)
+          {
+            m_StackCounter += m_StackEntries.top();
+            m_StackEntries.pop();
+          }
+        }
 
 			case RETURN:
 				{

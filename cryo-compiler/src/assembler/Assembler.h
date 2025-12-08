@@ -3,6 +3,7 @@
 #include "Token.h"
 #include "common/Error.h"
 #include "Instructions.h"
+#include "VariableStack.h"
 
 #include <filesystem>
 #include <unordered_map>
@@ -31,7 +32,7 @@ namespace Cryo::Assembler {
 
 		std::string validate_function(uint32_t function_start, ErrorQueue& errors);
 		void assemble_function(uint32_t function_start, const std::string& signature, ErrorQueue& errors);
-		void assemble_instruction(uint32_t instruction, Function& func, ErrorQueue& errors);
+		void assemble_instruction(uint32_t instruction, Function& func, VariableStack& variables, ErrorQueue& errors);
 
 		void serialize();
 

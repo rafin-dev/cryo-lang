@@ -1,7 +1,14 @@
+#include "assembler/Instructions.h"
+#include "assembler/Token.h"
+#include "common/Error.h"
 #include "cryopch.h"
 #include "Assembler.h"
 
 #include "Tokenizer.h"
+#include <cmath>
+#include <cstdint>
+#include <exception>
+#include <tuple>
 
 namespace Cryo::Assembler {
 
@@ -65,7 +72,6 @@ namespace Cryo::Assembler {
 				return;
 			}
 		}
-		m_Functions;
 		if (errors.get_severity() != Error::level_none)
 		{
 			return;
@@ -167,8 +173,11 @@ namespace Cryo::Assembler {
 	{
 		uint32_t current_token;
 		for (current_token = function_start; m_Tokens[current_token].type != TokenType::StartBody; current_token++);
+    
+    VariableStack variables;
+    // TODO: add the $return and $param.. to the variable stack
 
-		Function func;
+    Function func;
 
 		for (current_token++; current_token < m_Tokens.size() && m_Tokens[current_token].type != TokenType::EndBody; current_token++)
 		{
@@ -180,7 +189,7 @@ namespace Cryo::Assembler {
 
 			if (token.type == TokenType::Instruction)
 			{
-				assemble_instruction(current_token, func, errors);
+				assemble_instruction(current_token, func, variables, errors);
 				if (errors.get_severity() == Error::level_critical) { return; }
 			}
 		}
@@ -189,21 +198,32 @@ namespace Cryo::Assembler {
 		m_Functions.insert(std::pair(signature, func));
 	}
 
-	void Assembler::assemble_instruction(uint32_t instruction, Function& func, ErrorQueue& errors)
+	void Assembler::assemble_instruction(uint32_t instruction, Function& func, VariableStack& variables, ErrorQueue& errors)
 	{
-		bool valid = true;
 		uint32_t current_token = instruction;
-		auto ite = s_InstructionsString.find(m_Tokens[instruction].tokenText);
-		for (TokenType type : ite->second.second)
-		{
-			current_token++;
-			if (type != m_Tokens[current_token].type)
-			{
-				valid = false;
-				break;
-			}
-		}
-		if (valid)
+    CryoOpcode opcode = (CryoOpcode)0;
+    uint32_t argument_count = 0;
+    bool found = true;
+    for (auto ite = s_InstructionsString.find(m_Tokens[instruction].tokenText); ite != s_InstructionsString.end(); ite = std::next(ite))
+    {
+      current_token = instruction;
+      for (auto token_type : ite->second.second)
+      {
+        current_token++;
+        if (token_type != m_Tokens[current_token].type)
+        {
+          found = false;
+          break;
+        }
+      }
+      if (found)
+      {
+        opcode = ite->second.first;
+        argument_count = ite->second.second.size();
+        break;
+      }
+    }
+		if (found)
 		{
 			current_token++;
 			if (m_Tokens[current_token].type != TokenType::EndCommand)
@@ -212,17 +232,31 @@ namespace Cryo::Assembler {
 				return;
 			}
 
-			func.Instructions.emplace_back((uint32_t)ite->second.first);
+			func.Instructions.emplace_back((uint32_t)opcode);
 			current_token = instruction;
 
-			for (int i = 0; i < ite->second.second.size(); i++)
+			for (int i = 0; i < argument_count; i++)
 			{
 				current_token++;
 				switch (m_Tokens[current_token].type)
 				{
+        case TokenType::Comma:
+          break;
+
 				case TokenType::Integer:
-					func.Instructions.emplace_back(std::stoul(std::string(m_Tokens[current_token].tokenText)));
-					break;
+          {
+            uint32_t value = std::stoul(std::string(m_Tokens[current_token].tokenText));
+            if (m_Tokens[instruction].tokenText == "POP")
+            {
+              for (int j = 0; j < value; j++)
+              {
+                variables.pop_variable();
+              }
+            }
+
+            func.Instructions.emplace_back(value);
+					  break;
+          }
 
 				case TokenType::Float:
 					func.Instructions.emplace_back(std::stof(std::string(m_Tokens[current_token].tokenText)));
@@ -230,7 +264,16 @@ namespace Cryo::Assembler {
 
 				case TokenType::ID:
 				{
-					uint32_t index = 0;
+          if (m_Tokens[instruction].tokenText == "PUSH")
+          {
+            if (!variables.push_variable(m_Tokens[current_token].tokenText, func.Instructions.back()))
+            {
+              errors.push_error(ERR_A_VARIABLE_NAME_ALREDY_IN_USE, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText); 
+            }
+            break;
+          }
+
+          uint32_t index = 0;
 					for (auto ite = m_IDs.begin(); *ite != m_Tokens[current_token].tokenText; std::advance(ite, 1)) 
 					{ 
 						index++; 
@@ -251,7 +294,7 @@ namespace Cryo::Assembler {
 
 		// Could not find a matching instruction
 		errors.push_error(ERR_A_UNEXPECTED_TOKEN_IN_INSTRUCTION_PARAMETERS, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
-	}
+  }
 
 #define WRITE_BINARY(stream, x) stream.write(reinterpret_cast<const char*>(&x), sizeof(x))
 

@@ -8,20 +8,21 @@ namespace Cryo {
 
 	std::unordered_map<std::string_view, Error::ErrorData> Error::s_ErrorTexts =
 	{
-		{ CRI_A_ASSEMBLY_FILE_DOES_NOT_EXIST,							{ "Cryo Assembly file does not exist!",						Error::level_critical } },
-		{ ERR_A_INVALID_CHARACTER_IN_ID_OR_TYPE,						{ "Invalid character in Cryo Assembly Identifier/Type!",	Error::level_error } },
-		{ ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE,							{ "Could not determine token type!",						Error::level_error } },
-		{ ERR_A_MULTIPLE_DOTS_IN_VALUE,									{ "Multiple dots in value token!",							Error::level_error } },
-		{ ERR_A_UNEXPECTED_END,											{ "Unexpected end!",										Error::level_error } },
-		{ ERR_A_FUNCTION_DEFINITION_MISSING_IDENTIFIER,					{ "Function definition missing identifier",					Error::level_error } },
-		{ ERR_A_FUNCTION_DEFINITION_MISSING_PARAM_TYPE,					{ "Function definition missing parameter type",				Error::level_error } },
-		{ ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_DECLARATION,			{ "Function definition missing return declaration!",		Error::level_error } },
-		{ ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_TYPE,				{ "Function definition missing return Type!",				Error::level_error } },
-		{ ERR_A_FUNCTION_DEFINITION_MISSING_BODY,						{ "Function definition missing body!",						Error::level_error } },
-		{ ERR_A_INVALID_FUNCTION_DEFINTION,								{ "Invalid function definition!",							Error::level_error } },
-		{ ERR_A_INVALID_TOKEN_IN_FUNCTION_BODY,							{ "Invalid token in function body!",						Error::level_error } },
-		{ ERR_A_UNEXPECTED_TOKEN_IN_INSTRUCTION_PARAMETERS,				{ "Unexpected token in instruction parameters!",			Error::level_error } },
-		{ ERR_A_MISSING_SEMICOLON,										{ "Missing semicolon!",										Error::level_error } }
+		{ CRI_A_ASSEMBLY_FILE_DOES_NOT_EXIST,                             { "Cryo Assembly file does not exist!",                        Error::level_critical } },
+		{ ERR_A_INVALID_CHARACTER_IN_ID_OR_TYPE,                          { "Invalid character in Cryo Assembly Identifier/Type!",       Error::level_error } },
+		{ ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE,                           { "Could not determine token type!",                           Error::level_error } },
+		{ ERR_A_MULTIPLE_DOTS_IN_VALUE,                                   { "Multiple dots in value token!",                             Error::level_error } },
+		{ ERR_A_UNEXPECTED_END,                                           { "Unexpected end!",                                           Error::level_error } },
+		{ ERR_A_FUNCTION_DEFINITION_MISSING_IDENTIFIER,                   { "Function definition missing identifier",                    Error::level_error } },
+		{ ERR_A_FUNCTION_DEFINITION_MISSING_PARAM_TYPE,                   { "Function definition missing parameter type",                Error::level_error } },
+		{ ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_DECLARATION,	          { "Function definition missing return declaration!",           Error::level_error } },
+		{ ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_TYPE,                  { "Function definition missing return Type!",                  Error::level_error } },
+		{ ERR_A_FUNCTION_DEFINITION_MISSING_BODY,                         { "Function definition missing body!",                         Error::level_error } },
+		{ ERR_A_INVALID_FUNCTION_DEFINTION,                               { "Invalid function definition!",                              Error::level_error } },
+		{ ERR_A_INVALID_TOKEN_IN_FUNCTION_BODY,                           { "Invalid token in function body!",                           Error::level_error } },
+		{ ERR_A_UNEXPECTED_TOKEN_IN_INSTRUCTION_PARAMETERS,               { "Unexpected token in instruction parameters!",               Error::level_error } },
+		{ ERR_A_MISSING_SEMICOLON,                                        { "Missing semicolon!",                                        Error::level_error } },
+    { ERR_A_VARIABLE_NAME_ALREDY_IN_USE,                              { "Variable name alredy in use!",                              Error::level_error } }
 	};
 
 	Error::Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token)

@@ -2,6 +2,8 @@
 
 #include <string>
 #include <filesystem>
+#include <vector>
+#include <optional>
 #include <unordered_map>
 
 namespace Cryo {
