@@ -1,6 +1,7 @@
 #include "cryopch.h"
 #include "Tokenizer.h"
 
+#include "InstructionSet.h"
 #include "Instructions.h"
 
 namespace Cryo::Assembler {
@@ -172,7 +173,7 @@ namespace Cryo::Assembler {
 
 		// Check if token is instruction
 		{
-			if (s_InstructionsString.contains(token_vec[token_index].tokenText))
+			if (InstructionSet::is_instruction(token_vec[token_index].tokenText))
 			{
 				token_vec[token_index].type = TokenType::Instruction;
 				return;

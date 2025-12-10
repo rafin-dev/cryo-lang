@@ -1,14 +1,19 @@
+#include "assembler/VariableStack.h"
+#include "cryopch.h"
+#include "assembler/InstructionSet.h"
 #include "assembler/Instructions.h"
 #include "assembler/Token.h"
 #include "common/Error.h"
-#include "cryopch.h"
 #include "Assembler.h"
-
 #include "Tokenizer.h"
+#include "spdlog/common.h"
+
 #include <cmath>
 #include <cstdint>
 #include <exception>
 #include <tuple>
+
+#define PUSH_ERROR(error_list, error, token_index) error_list.push_error(error, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[(token_index)].tokenText)
 
 namespace Cryo::Assembler {
 
@@ -95,7 +100,7 @@ namespace Cryo::Assembler {
 		// A valid function will have at least 9 tokens
 		if (function_start + 8 >= m_Tokens.size())
 		{
-			errors.push_error(ERR_A_UNEXPECTED_END, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens.back().tokenText);
+			PUSH_ERROR(errors, ERR_A_UNEXPECTED_END, m_Tokens.size() - 1);
 			return std::string();
 		}
 
@@ -109,7 +114,7 @@ namespace Cryo::Assembler {
 			if (m_Tokens[current_token].type == TokenType::FunctionDeclaration)
 			{
 				invalid_fn_count++;
-				errors.push_error(ERR_A_INVALID_FUNCTION_DEFINTION, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
+				PUSH_ERROR(errors, ERR_A_INVALID_FUNCTION_DEFINTION, current_token);
 			}
 			else if (m_Tokens[current_token].type == TokenType::EndBody)
 			{
@@ -119,7 +124,7 @@ namespace Cryo::Assembler {
 		}
 		if (!found_valid_end)
 		{
-			errors.push_error(ERR_A_UNEXPECTED_END, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
+			PUSH_ERROR(errors, ERR_A_UNEXPECTED_END, current_token);
 			return std::string();
 		}
 		if (invalid_fn_count != 0)
@@ -133,7 +138,7 @@ namespace Cryo::Assembler {
 		current_token = function_start + 1; // Go from 'fn' to the id '$...'
 		if (m_Tokens[current_token].type != TokenType::ID)
 		{
-			errors.push_error(ERR_A_FUNCTION_DEFINITION_MISSING_IDENTIFIER, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
+			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_IDENTIFIER, current_token);
 			return std::string();
 		}
 		signature = std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1);
@@ -142,7 +147,7 @@ namespace Cryo::Assembler {
 		current_token++;
 		if (m_Tokens[current_token].type != TokenType::Type)
 		{
-			errors.push_error(ERR_A_FUNCTION_DEFINITION_MISSING_PARAM_TYPE, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
+			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_PARAM_TYPE, current_token);
 			return std::string();
 		}
 		signature += "::" + std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1);
@@ -152,7 +157,7 @@ namespace Cryo::Assembler {
 		current_token++;
 		if (m_Tokens[current_token].type != TokenType::ReturnTypeDeclaration)
 		{
-			errors.push_error(ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_DECLARATION, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
+			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_DECLARATION, current_token);
 			return std::string();
 		}
 
@@ -160,7 +165,7 @@ namespace Cryo::Assembler {
 		current_token++;
 		if (m_Tokens[current_token].type != TokenType::Type)
 		{
-			errors.push_error(ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_TYPE, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
+			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_TYPE, current_token);
 			return std::string();
 		}
 
@@ -184,7 +189,7 @@ namespace Cryo::Assembler {
 			Token& token = m_Tokens[current_token];
 			if (!s_ValidTokensInFunctionBody.contains(token.type))
 			{
-				errors.push_error(ERR_A_INVALID_TOKEN_IN_FUNCTION_BODY, m_FilePath, m_Buffer.get(), m_BufferSize, token.tokenText);
+				PUSH_ERROR(errors, ERR_A_INVALID_TOKEN_IN_FUNCTION_BODY, current_token);
 			}
 
 			if (token.type == TokenType::Instruction)
@@ -200,100 +205,125 @@ namespace Cryo::Assembler {
 
 	void Assembler::assemble_instruction(uint32_t instruction, Function& func, VariableStack& variables, ErrorQueue& errors)
 	{
-		uint32_t current_token = instruction;
-    CryoOpcode opcode = (CryoOpcode)0;
-    uint32_t argument_count = 0;
-    bool found = true;
-    for (auto ite = s_InstructionsString.find(m_Tokens[instruction].tokenText); ite != s_InstructionsString.end(); ite = std::next(ite))
+		uint32_t current_token = 0;
+    std::vector<TokenType> parameters_type;
+    parameters_type.reserve(4);
+    bool has_semicolon = false;
+    for (current_token = instruction + 1; current_token < m_Tokens.size(); current_token++)
     {
-      current_token = instruction;
-      for (auto token_type : ite->second.second)
+      if (m_Tokens[current_token].type == TokenType::EndCommand)
       {
-        current_token++;
-        if (token_type != m_Tokens[current_token].type)
-        {
-          found = false;
-          break;
-        }
-      }
-      if (found)
-      {
-        opcode = ite->second.first;
-        argument_count = ite->second.second.size();
+        has_semicolon = true;
         break;
       }
+      else if (m_Tokens[current_token].type == TokenType::Instruction)
+      {
+        break;
+      }
+      parameters_type.emplace_back(m_Tokens[current_token].type);
     }
-		if (found)
-		{
-			current_token++;
-			if (m_Tokens[current_token].type != TokenType::EndCommand)
-			{
-				errors.push_error(ERR_A_MISSING_SEMICOLON, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token - 1].tokenText);
-				return;
-			}
+    if (!has_semicolon)
+    {
+      PUSH_ERROR(errors, ERR_A_MISSING_SEMICOLON, current_token - 1);
+      return;
+    }
 
-			func.Instructions.emplace_back((uint32_t)opcode);
-			current_token = instruction;
+    CryoOpcode opcode = InstructionSet::get_opcode(m_Tokens[instruction].tokenText, parameters_type);
+    if (opcode == CryoOpcode::NONE)
+    {
+      PUSH_ERROR(errors, ERR_A_UNEXPECTED_TOKEN_IN_INSTRUCTION_PARAMETERS, instruction);
+      return;
+    }
 
-			for (int i = 0; i < argument_count; i++)
-			{
-				current_token++;
-				switch (m_Tokens[current_token].type)
-				{
-        case TokenType::Comma:
-          break;
+    func.Instructions.emplace_back(opcode);
 
-				case TokenType::Integer:
+    // Deal with parameters
+    current_token = instruction + 1; // First parameter
+    switch (opcode)
+    {
+      case (CryoOpcode::STLS):
+        variables.start_stack_layer();
+        break;
+
+      case (CryoOpcode::STLE):
+        if (!variables.end_stack_layer())
+        {
+          PUSH_ERROR(errors, ERR_A_THERE_ARE_NO_STACK_LAYERS_TO_BE_CLOSED, instruction);
+          return;
+        }
+        break;
+
+      case (CryoOpcode::PUSH):
+        {
+           uint32_t size = std::stoul(std::string(m_Tokens[current_token].tokenText)); // Size in bytes to be pushed
+           func.Instructions.emplace_back(size);
+           current_token++;
+           if (!variables.push_variable(m_Tokens[current_token].tokenText, size)) // Register variable
+           {
+             PUSH_ERROR(errors, ERR_A_VARIABLE_NAME_ALREDY_IN_USE, current_token);
+             return;
+           }
+        }
+        break;
+
+      case (CryoOpcode::POP):
+        {
+          uint32_t count = std::stoul(std::string(m_Tokens[current_token].tokenText));
+          func.Instructions.emplace_back(count);
+          for (uint32_t i = 0; i < count; i++)
           {
-            uint32_t value = std::stoul(std::string(m_Tokens[current_token].tokenText));
-            if (m_Tokens[instruction].tokenText == "POP")
+            if (!variables.pop_variable())
             {
-              for (int j = 0; j < value; j++)
-              {
-                variables.pop_variable();
-              }
+              PUSH_ERROR(errors, ERR_A_STACK_DOES_NOT_CONTAIN_VARIABLES_TO_POP, current_token);
+              return;
             }
+          }
+        }
+        break;
 
-            func.Instructions.emplace_back(value);
-					  break;
+      case (CryoOpcode::SETU32):
+        {
+          const VariableData* data = variables.get_variable(m_Tokens[current_token].tokenText);
+          if (!data)
+          {
+            PUSH_ERROR(errors, ERR_A_VARIBALE_DOES_NOT_EXIST, current_token);
+            return;
+          }
+          func.Instructions.emplace_back(data->Position);
+          
+          current_token++;
+          uint32_t value = std::stoul(std::string(m_Tokens[current_token].tokenText));
+          func.Instructions.emplace_back(value);
+        }
+        break;
+
+      case (CryoOpcode::PRINTU32):
+        {
+          const VariableData* data = variables.get_variable(m_Tokens[current_token].tokenText);
+          if (!data)
+          {
+            PUSH_ERROR(errors, ERR_A_VARIBALE_DOES_NOT_EXIST, current_token);
+            return;
+          }
+          func.Instructions.emplace_back(data->Position);
+        }
+        break;
+
+      case (CryoOpcode::CALL_from_assembly_signature):
+        {
+          uint32_t sig_index = 0;
+          for (auto ite = m_IDs.begin(); *ite != m_Tokens[current_token].tokenText; ite = std::next(ite))
+          {
+            sig_index++;
           }
 
-				case TokenType::Float:
-					func.Instructions.emplace_back(std::stof(std::string(m_Tokens[current_token].tokenText)));
-					break;
+          func.Instructions.emplace_back(sig_index);
+        }
+        break;
 
-				case TokenType::ID:
-				{
-          if (m_Tokens[instruction].tokenText == "PUSH")
-          {
-            if (!variables.push_variable(m_Tokens[current_token].tokenText, func.Instructions.back()))
-            {
-              errors.push_error(ERR_A_VARIABLE_NAME_ALREDY_IN_USE, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText); 
-            }
-            break;
-          }
-
-          uint32_t index = 0;
-					for (auto ite = m_IDs.begin(); *ite != m_Tokens[current_token].tokenText; std::advance(ite, 1)) 
-					{ 
-						index++; 
-					}
-
-					func.Instructions.emplace_back(index);
-					break;
-				}
-
-				default:
-					errors.push_error(ERR_A_UNEXPECTED_TOKEN_IN_INSTRUCTION_PARAMETERS, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
-					break;
-				}
-			}			
-
-			return;
-		}
-
-		// Could not find a matching instruction
-		errors.push_error(ERR_A_UNEXPECTED_TOKEN_IN_INSTRUCTION_PARAMETERS, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[current_token].tokenText);
+      default:
+        break;
+    }
   }
 
 #define WRITE_BINARY(stream, x) stream.write(reinterpret_cast<const char*>(&x), sizeof(x))

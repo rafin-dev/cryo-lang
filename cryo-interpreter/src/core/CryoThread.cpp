@@ -61,6 +61,13 @@ namespace Cryo {
             m_StackCounter += m_StackEntries.top();
             m_StackEntries.pop();
           }
+          break;
+        }
+
+      case SETU32:
+        {
+          // TODO
+          break;
         }
 
 			case RETURN:

@@ -14,6 +14,11 @@ namespace Cryo::Assembler {
     m_StackCounter += size;
     m_Stack.push(name);
 
+    if (!m_StackLayers.empty())
+    {
+      m_StackLayers.top() += 1;
+    }
+
     return true;
   }
   
@@ -30,6 +35,31 @@ namespace Cryo::Assembler {
     m_Variables.erase(ite);
     m_Stack.pop();
 
+    if (!m_StackLayers.empty())
+    {
+      if (m_StackLayers.top() == 0)
+      {
+        return false;
+      }
+      m_StackLayers.top() -= 1;
+    }
+
+    return true;
+  }
+
+  void VariableStack::start_stack_layer()
+  {
+    m_StackLayers.push(0);
+  }
+
+  bool VariableStack::end_stack_layer()
+  {
+    if (m_StackLayers.empty())
+    {
+      return false;
+    }
+
+    m_StackLayers.pop();
     return true;
   }
 

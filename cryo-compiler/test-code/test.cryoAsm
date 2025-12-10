@@ -1,12 +1,14 @@
 fn $main %void -> %void
 {
-	PUSH 4 $uint32_a;
-	CALL $void::test::void;
+  PUSH 4 $uint32_a;
+  CALL $void::test::void;
+  SETU32 $uint32_a 10;
+  PRINTU32 $uint32_a;
   POP 1;
   RETURN;
 }
 
 fn $test %void -> %void
 {
-	RETURN;
+  RETURN;
 }

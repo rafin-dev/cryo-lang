@@ -22,8 +22,11 @@ namespace Cryo {
 		{ ERR_A_INVALID_TOKEN_IN_FUNCTION_BODY,                           { "Invalid token in function body!",                           Error::level_error } },
 		{ ERR_A_UNEXPECTED_TOKEN_IN_INSTRUCTION_PARAMETERS,               { "Unexpected token in instruction parameters!",               Error::level_error } },
 		{ ERR_A_MISSING_SEMICOLON,                                        { "Missing semicolon!",                                        Error::level_error } },
-    { ERR_A_VARIABLE_NAME_ALREDY_IN_USE,                              { "Variable name alredy in use!",                              Error::level_error } }
-	};
+    { ERR_A_VARIABLE_NAME_ALREDY_IN_USE,                              { "Variable name alredy in use!",                              Error::level_error } },
+	  { ERR_A_STACK_DOES_NOT_CONTAIN_VARIABLES_TO_POP,                  { "Stack does not contain variables to pop!",                  Error::level_error } },
+    { ERR_A_VARIBALE_DOES_NOT_EXIST,                                  { "Variable does not exist!",                                  Error::level_error } },
+    { ERR_A_THERE_ARE_NO_STACK_LAYERS_TO_BE_CLOSED,                   { "There are no StackLayers to be closed!",                    Error::level_error } }
+  };
 
 	Error::Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token)
 	{
