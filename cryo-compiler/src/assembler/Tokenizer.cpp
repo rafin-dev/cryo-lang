@@ -4,6 +4,8 @@
 #include "InstructionSet.h"
 #include "Instructions.h"
 
+#include <spdlog/spdlog.h>
+
 namespace Cryo::Assembler {
 
 	Tokenizer::Tokenizer(const char* buffer, uint32_t buffer_size, const std::filesystem::path& path)

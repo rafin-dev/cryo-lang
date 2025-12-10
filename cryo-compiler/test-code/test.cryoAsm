@@ -15,5 +15,8 @@ fn $main %void -> %void
 
 fn $test %void -> %void
 {
+  PUSH 4 $ola;
+  SETU32 $ola 30;
+  PRINTU32 $ola;
   RETURN;
 }

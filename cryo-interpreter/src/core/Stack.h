@@ -11,8 +11,8 @@ namespace Cryo {
   struct CallStackEntry
   {
     CallStackEntry() = default;
-    CallStackEntry(const CryoFunction* func, const uint32_t* pc)
-      : Function(func), ProgramCounter(pc)
+    CallStackEntry(const CryoFunction* func, const uint32_t* pc, uint32_t stack_start)
+      : Function(func), ProgramCounter(pc), StackLayerCount(0), FunctsionStackStart(stack_start)
     {}
 
     const CryoFunction* Function = nullptr;
@@ -20,6 +20,8 @@ namespace Cryo {
   
   private:
     uint32_t StackLayerCount = 0;
+    uint32_t FunctsionStackStart = 0;
+
     friend class Stack;
   };
 
@@ -40,6 +42,11 @@ namespace Cryo {
     template <typename T>
     T& get_variable(uint32_t stack_index)
     {
+      if (!m_CallStack.empty())
+      {
+        stack_index += m_CallStack.top().FunctsionStackStart;
+      }
+
       T* ptr = (T*)&m_StackBuffer[stack_index];
       return *ptr;
     }

@@ -77,7 +77,7 @@ namespace Cryo {
 
   void Stack::push_call_stack(const CryoFunction* func, const uint32_t* pc)
   {
-    m_CallStack.push(CallStackEntry(func, pc));
+    m_CallStack.push(CallStackEntry(func, pc, m_StackCounter));
     start_stack_layer(); // Function Layer
   }
 

@@ -6,7 +6,8 @@
 #include "common/Error.h"
 #include "Assembler.h"
 #include "Tokenizer.h"
-#include "spdlog/common.h"
+
+#include <spdlog/spdlog.h>
 
 #include <cmath>
 #include <cstdint>
@@ -224,7 +225,7 @@ namespace Cryo::Assembler {
     }
     if (!has_semicolon)
     {
-      PUSH_ERROR(errors, ERR_A_MISSING_SEMICOLON, current_token - 1);
+      PUSH_ERROR(errors, ERR_A_MISSING_SEMICOLON, instruction);
       return;
     }
 
