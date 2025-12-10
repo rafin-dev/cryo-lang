@@ -216,7 +216,7 @@ namespace Cryo::Assembler {
         has_semicolon = true;
         break;
       }
-      else if (m_Tokens[current_token].type == TokenType::Instruction)
+      else if (m_Tokens[current_token].type == TokenType::Instruction || m_Tokens[current_token].type == TokenType::EndBody)
       {
         break;
       }
