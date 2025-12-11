@@ -5,16 +5,28 @@
 #include "Instructions.h"
 #include "VariableStack.h"
 
+#include <optional>
+#include <cstdint>
 #include <filesystem>
 #include <unordered_map>
 #include <set>
+#include <vector>
 
 namespace Cryo::Assembler {
 
 	struct Function
 	{
+    Function() = default;
+    Function(const std::string& sig, uint32_t func_start, uint32_t return_size, const std::vector<uint32_t>& parameters_sizes)
+      : Signature(sig), Instructions(), FunctionStart(func_start), ReturnSize(return_size), ParametersSizes(parameters_sizes)
+    {}
+
 		std::string Signature;
 		std::vector<uint32_t> Instructions;
+    uint32_t FunctionStart = 0;
+
+    uint32_t ReturnSize = 0;
+    std::vector<uint32_t> ParametersSizes;
 	};
 
 	class Assembler
@@ -30,9 +42,11 @@ namespace Cryo::Assembler {
 		// Tokens
 		std::vector<Token> m_Tokens;
 
-		std::string validate_function(uint32_t function_start, ErrorQueue& errors);
-		void assemble_function(uint32_t function_start, const std::string& signature, ErrorQueue& errors);
-		void assemble_instruction(uint32_t instruction, Function& func, VariableStack& variables, ErrorQueue& errors);
+    std::optional<Function> validate_function(uint32_t function_start, ErrorQueue& errors);
+		
+    void assemble_function(Function& func, ErrorQueue& errors);
+		
+    void assemble_instruction(uint32_t instruction, Function& func, VariableStack& variables, ErrorQueue& errors);
 
 		void serialize();
 

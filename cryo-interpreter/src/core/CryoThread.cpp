@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iostream>
 #include <iterator>
+#include <ostream>
 
 namespace Cryo {
 
@@ -56,7 +57,6 @@ namespace Cryo {
           m_ProgramCounter++;
 
           uint32_t count = *m_ProgramCounter;
-          std::cout << "Poping [" << count << "] entries from the stack!" << std::endl;
           if (!m_Stack.pop_variable(count))
           {
             std::cout << "Fatal Error: Invalid CryoAssembly, atempt by [" << m_CurrentFunction->FunctionSignature << "] to pop non existent variable!" << std::endl;
@@ -117,12 +117,12 @@ namespace Cryo {
 					const CryoFunction* function = m_CurrentFunction->OwnerAssembly->get_function_by_signature(std::string(result.value()));
 				if (!function) // Function not found, invalid assembly
 					{
-						std::cout << "Fatal Error: Invalid CryoAssembly, atempt by [" << m_CurrentFunction->FunctionSignature << "] to call non existent function!" << std::endl;
+						std::cout << "Fatal Error: Invalid CryoAssembly, atempt to call invalid function [" << result.value() << "]!" << std::endl;
 						clear();
 						return;
 					}
 
-					m_Stack.push_call_stack(m_CurrentFunction, m_ProgramCounter);
+					m_Stack.push_call_stack(m_CurrentFunction, function, m_ProgramCounter);
 					m_CurrentFunction = function;
 					m_ProgramCounter = function->FunctionStart - 1; // Account for the m_ProgramCounter++ before the next loop iteration
 

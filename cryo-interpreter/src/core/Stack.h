@@ -36,7 +36,7 @@ namespace Cryo {
     void start_stack_layer();
     bool end_stack_layer();
 
-    void push_call_stack(const CryoFunction* func, const uint32_t* pc);
+    void push_call_stack(const CryoFunction* func, const CryoFunction* calee, const uint32_t* pc);
     CallStackEntry pop_call_stack();
 
     template <typename T>
@@ -57,7 +57,7 @@ namespace Cryo {
     // Variables
     std::vector<uint8_t> m_StackBuffer;
     uint32_t m_StackCounter = 0;
-    std::stack<uint32_t> m_StackEntries;
+    std::vector<uint32_t> m_StackEntries;
     std::stack<uint32_t> m_StackLayers;
   
     std::stack<CallStackEntry> m_CallStack; 

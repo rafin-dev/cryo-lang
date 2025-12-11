@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 
 #include "assembler/Assembler.h"
+#include "assembler/TypeList.h"
 
 int main(int argc, const char** argv)
 {
@@ -21,6 +22,7 @@ int main(int argc, const char** argv)
     }
 
     // TODO: deal with more arguments
+    Cryo::Assembler::TypeList::clear_custom_types();
     Cryo::ErrorQueue errors;
     Cryo::Assembler::Assembler assembler(argv[argc - 1]);
 

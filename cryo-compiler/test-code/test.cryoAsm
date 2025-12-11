@@ -1,22 +1,23 @@
-fn $main %void -> %void
+fn $main @void -> @void
 {
-  CALL $void::test::void;
-  
-  PUSH 4 $uint32_a;
+  PUSH 4 $result;
+  PUSH 4 $par;
+  SETU32 $par 10;
+  CALL $uint32::test::uint32;
+  PRINTU32 $result;
+  POP 2;
 
-  SETU32 $uint32_a 10;
-  PRINTU32 $uint32_a;
-  
-  SETU32 $uint32_a 25;
-  PRINTU32 $uint32_a;
+  PUSH 4 $uint32_b;
+  SETU32 $uint32_b 25;
+  PRINTU32 $uint32_b;
 
   RETURN;
 }
 
-fn $test %void -> %void
+fn $test @uint32 -> @uint32
 {
-  PUSH 4 $ola;
-  SETU32 $ola 30;
-  PRINTU32 $ola;
+  PRINTU32 $param_0;
+
+  SETU32 $return 15;
   RETURN;
 }

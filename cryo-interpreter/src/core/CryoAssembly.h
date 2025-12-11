@@ -15,6 +15,10 @@ namespace Cryo {
 		uint32_t* FunctionStart = nullptr;
 		uint32_t InstrutionCount = 0;
 		std::string_view FunctionSignature;
+
+    uint32_t ReturnTypeSize = 0;
+    std::vector<uint32_t> ParameterSizes;
+
 		const CryoAssembly* OwnerAssembly = nullptr;
 	};
 

@@ -1,5 +1,10 @@
+#include "core/CryoAssembly.h"
 #include "cryopch.h"
 #include "Stack.h"
+
+#include <cstdint>
+#include <exception>
+#include <stdexcept>
 
 #define MB 1000000
 
@@ -18,7 +23,7 @@ namespace Cryo {
       return false;
     }
 
-    m_StackEntries.push(size);
+    m_StackEntries.emplace_back(size);
 
     if (!m_StackLayers.empty())
     {
@@ -37,8 +42,8 @@ namespace Cryo {
         return false;
       }
       
-      m_StackCounter -= m_StackEntries.top();
-      m_StackEntries.pop();
+      m_StackCounter -= m_StackEntries.back();
+      m_StackEntries.erase(std::prev(m_StackEntries.end()));
       if (!m_StackLayers.empty())
       {
         m_StackLayers.top() -= 1;
@@ -75,9 +80,28 @@ namespace Cryo {
     return true;
   }
 
-  void Stack::push_call_stack(const CryoFunction* func, const uint32_t* pc)
+  void Stack::push_call_stack(const CryoFunction* func, const CryoFunction* calee, const uint32_t* pc)
   {
-    m_CallStack.push(CallStackEntry(func, pc, m_StackCounter));
+    uint32_t func_stack_offset = 0;
+    for (uint32_t i = 0; i < calee->ParameterSizes.size(); i++)
+    {
+      uint32_t param_size = calee->ParameterSizes[calee->ParameterSizes.size() - 1 - i]; // Reverse iterate
+      if (m_StackEntries[m_StackEntries.size() - 1 - i] != param_size)
+      {
+        throw std::logic_error("Parameters used do not match function declaration!");
+      }
+      func_stack_offset += param_size;
+    }
+    if (calee->ReturnTypeSize != 0)
+    {
+      if (m_StackEntries[m_StackEntries.size() - 1 - calee->ParameterSizes.size()] != calee->ReturnTypeSize)
+      {
+        throw std::logic_error("Unhandled function return!");
+      }
+      func_stack_offset += calee->ReturnTypeSize;
+    }
+
+    m_CallStack.push(CallStackEntry(func, pc, m_StackCounter - func_stack_offset));
     start_stack_layer(); // Function Layer
   }
 
@@ -102,7 +126,7 @@ namespace Cryo {
   void Stack::clear()
   {
     m_StackCounter = 0;
-    m_StackEntries = std::stack<uint32_t>();
+    m_StackEntries.clear();
     m_StackLayers = std::stack<uint32_t>();
     m_CallStack = std::stack<CallStackEntry>();
   }

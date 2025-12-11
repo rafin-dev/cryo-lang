@@ -1,4 +1,5 @@
 #include "cryopch.h"
+#include <ostream>
 #include "CryoAssembly.h"
 
 namespace Cryo {
@@ -89,27 +90,35 @@ namespace Cryo {
 			}
 		}
 
-		uint32_t* functions_start = m_AssemblyBuffer + 2 + (strings_size / sizeof(uint32_t)); // Jump ahead of the header and string literals
-		uint32_t func_count = 0;
-		for (int i = 0; functions_start[i] != block_end; i++) { func_count++; }
-		func_count /= 3;
-
-		for (int i = 0; i < func_count; i++)
+		uint32_t* function_ptr = m_AssemblyBuffer + 1 + (strings_size / sizeof(uint32_t)); // Jump ahead of the header and string literals
+		while (function_ptr[0] != block_end || function_ptr[1] != block_end)
 		{
-			uint32_t* func_ptr = functions_start + (i * 3);
-			// func { uint32_t signature_id, uint32_t instruction_start, uint32_t instruction_count }
+      function_ptr += 1;
+			// func { uint32_t signature_id, uint32_t instruction_start, uint32_t instruction_count, uint32_t return_size, uint32_t param_sizes[?] }
 			CryoFunction func = {};
-			uint32_t t = func_ptr[1];
-			func.FunctionStart = m_AssemblyBuffer + func_ptr[1];
-			func.InstrutionCount = func_ptr[2];
-			func.FunctionSignature = m_StringLiterals[func_ptr[0]];
-			func.OwnerAssembly = this;
+			uint32_t t = function_ptr[1];
+			func.FunctionStart = m_AssemblyBuffer + function_ptr[1];
+			func.InstrutionCount = function_ptr[2];
+			func.FunctionSignature = m_StringLiterals[function_ptr[0]];
+			
+      func.ReturnTypeSize = function_ptr[3];
+      func.ParameterSizes.reserve(5);
+      uint32_t param_count = 0;
+      for (int i = 4; function_ptr[i] != block_end; i++)
+      {
+        param_count++;
+        func.ParameterSizes.emplace_back(function_ptr[i]);
+      }
+
+      func.OwnerAssembly = this;
 
 			m_Functions.emplace_back(func);
 
 			m_FunctionFromLocation.insert(std::pair(func.FunctionStart - m_AssemblyBuffer, m_Functions.size() - 1));
 			m_FunctionFromSignature.insert(std::pair(func.FunctionSignature, m_Functions.size() - 1));
-		}
+		
+      function_ptr += 4 + param_count; // Minimun size + parameters
+    }
 	}
 
 	CryoAssembly::~CryoAssembly()

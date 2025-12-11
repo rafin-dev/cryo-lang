@@ -1,12 +1,14 @@
-#include "assembler/VariableStack.h"
 #include "cryopch.h"
-#include "assembler/InstructionSet.h"
-#include "assembler/Instructions.h"
-#include "assembler/Token.h"
-#include "common/Error.h"
 #include "Assembler.h"
-#include "Tokenizer.h"
 
+#include "common/Error.h"
+#include "InstructionSet.h"
+#include "Instructions.h"
+#include "Token.h"
+#include "Tokenizer.h"
+#include "TypeList.h"
+
+#include <optional>
 #include <spdlog/spdlog.h>
 
 #include <cmath>
@@ -53,26 +55,25 @@ namespace Cryo::Assembler {
 			}
 		}
 
-		std::unordered_map<std::string, uint32_t> valid_functions;
 		for (uint32_t i = 0; i < m_Tokens.size(); i++)
 		{
 			if (m_Tokens[i].type == TokenType::FunctionDeclaration)
 			{
-				std::string sig = validate_function(i, errors);
+        auto result = validate_function(i, errors);
 				if (errors.get_severity() == Error::level_critical)
 				{
 					return;
 				}
-				if (!sig.empty())
+				if (result.has_value())
 				{
-					valid_functions.insert(std::pair(sig, i));
+					m_Functions.insert(std::pair(result.value().Signature, result.value()));
 				}
 			}
 		}
 
-		for (auto& ite : valid_functions)
+		for (auto& ite : m_Functions)
 		{
-			assemble_function(ite.second, ite.first, errors);
+			assemble_function(ite.second, errors);
 			if (errors.get_severity() == Error::level_critical)
 			{
 				return;
@@ -96,19 +97,21 @@ namespace Cryo::Assembler {
 		TokenType::StringLiteral
 	};
 
-	std::string Assembler::validate_function(uint32_t function_start, ErrorQueue& errors)
+  // TODO: check if it hasn't ran out of tokens pretty much everywhere
+	std::optional<Function> Assembler::validate_function(uint32_t function_start, ErrorQueue& errors)
 	{
 		// A valid function will have at least 9 tokens
 		if (function_start + 8 >= m_Tokens.size())
 		{
 			PUSH_ERROR(errors, ERR_A_UNEXPECTED_END, m_Tokens.size() - 1);
-			return std::string();
+			return std::nullopt;
 		}
 
 		// See if there's any 'fn' tokens inside the function body
 		int invalid_fn_count = 0;
 		bool found_valid_end = false;
-		std::string signature;
+		Function func;
+    func.FunctionStart = function_start;
 		uint32_t current_token = function_start + 1; // Go from 'fn' to the id '$...'
 		for (; current_token < m_Tokens.size(); current_token++)
 		{
@@ -126,64 +129,82 @@ namespace Cryo::Assembler {
 		if (!found_valid_end)
 		{
 			PUSH_ERROR(errors, ERR_A_UNEXPECTED_END, current_token);
-			return std::string();
+			return std::nullopt;
 		}
 		if (invalid_fn_count != 0)
 		{
-			return std::string();
+			return std::nullopt;
 		}
 
 		// See if the function has a:
 		// id
-		Function func;
 		current_token = function_start + 1; // Go from 'fn' to the id '$...'
 		if (m_Tokens[current_token].type != TokenType::ID)
 		{
 			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_IDENTIFIER, current_token);
-			return std::string();
+			return std::nullopt;
 		}
-		signature = std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1);
+		func.Signature = std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1);
 
-		// at least one parameter type
-		current_token++;
-		if (m_Tokens[current_token].type != TokenType::Type)
-		{
-			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_PARAM_TYPE, current_token);
-			return std::string();
-		}
-		signature += "::" + std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1);
-		// TODO: check for more parameters
+	  // Parameter types 
+    {
+      for (current_token++; current_token < m_Tokens.size() && m_Tokens[current_token].type == TokenType::Type; current_token++)
+      {
+        auto result = TypeList::get_size_from_type(m_Tokens[current_token].tokenText);
+        if (!result.has_value())
+        {
+          PUSH_ERROR(errors, ERR_A_UNKNOWN_TYPE, current_token);
+          return std::nullopt;
+        }
+        if (result.value() != 0)
+        {
+          func.ParametersSizes.emplace_back(result.value());
+        }
+        func.Signature += "::" + std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1);
+      }
+      if (m_Tokens[current_token].type != TokenType::ReturnTypeDeclaration)
+      {
+        PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_DECLARATION, current_token);
+        return std::nullopt;
+      }
+    }
 
 		// return declaration
-		current_token++;
-		if (m_Tokens[current_token].type != TokenType::ReturnTypeDeclaration)
-		{
-			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_DECLARATION, current_token);
-			return std::string();
-		}
-
-		// return type
-		current_token++;
-		if (m_Tokens[current_token].type != TokenType::Type)
-		{
-			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_TYPE, current_token);
-			return std::string();
-		}
-
-		signature = "$" + std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1) + "::" + signature;
-		m_IDs.insert(signature);
-		return signature;
+    {
+      current_token++;
+      if (m_Tokens[current_token].type != TokenType::Type)
+      {
+        PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_RETURN_TYPE, current_token);
+        return std::nullopt;
+      }
+      auto result = TypeList::get_size_from_type(m_Tokens[current_token].tokenText);
+      if (!result.has_value())
+      {
+        PUSH_ERROR(errors, ERR_A_UNKNOWN_TYPE, current_token);
+        return std::nullopt;
+      }
+      func.ReturnSize = result.value();
+    }
+    
+		func.Signature = "$" + std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1) + "::" + func.Signature;
+		m_IDs.insert(func.Signature);
+		return func;
 	}
 
-	void Assembler::assemble_function(uint32_t function_start, const std::string& signature, ErrorQueue& errors)
+	void Assembler::assemble_function(Function& func ,ErrorQueue& errors)
 	{
 		uint32_t current_token;
-		for (current_token = function_start; m_Tokens[current_token].type != TokenType::StartBody; current_token++);
+		for (current_token = func.FunctionStart; m_Tokens[current_token].type != TokenType::StartBody; current_token++);
     
     VariableStack variables;
-    // TODO: add the $return and $param.. to the variable stack
-
-    Function func;
+    if (func.ReturnSize != 0)
+    {
+      variables.push_variable("$return", func.ReturnSize);
+    }
+    for (uint32_t i = 0; i < func.ParametersSizes.size(); i++)
+    {
+      variables.push_variable("$param_" + std::to_string(i), func.ParametersSizes[i]);
+    }
 
 		for (current_token++; current_token < m_Tokens.size() && m_Tokens[current_token].type != TokenType::EndBody; current_token++)
 		{
@@ -199,9 +220,6 @@ namespace Cryo::Assembler {
 				if (errors.get_severity() == Error::level_critical) { return; }
 			}
 		}
-
-		func.Signature = signature;
-		m_Functions.insert(std::pair(signature, func));
 	}
 
 	void Assembler::assemble_instruction(uint32_t instruction, Function& func, VariableStack& variables, ErrorQueue& errors)
@@ -377,10 +395,21 @@ namespace Cryo::Assembler {
 			constexpr uint32_t placeholder = 0;
 			WRITE_BINARY(file_stream, placeholder);
 
-			// INstruction count
+			// Instruction count
 			uint32_t size = func.second.Instructions.size();
 			WRITE_BINARY(file_stream, size);
-		}
+
+      // Return size
+		  WRITE_BINARY(file_stream, func.second.ReturnSize);
+
+      // Parameters Sizes
+      for (uint32_t param_size : func.second.ParametersSizes)
+      {
+        WRITE_BINARY(file_stream, param_size);
+      }
+
+      WRITE_BINARY(file_stream, block_end);
+    }
 
 		// Actual code
 		WRITE_BINARY(file_stream, block_end);

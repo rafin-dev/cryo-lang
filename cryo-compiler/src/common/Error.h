@@ -109,4 +109,5 @@ namespace Cryo {
 #define ERR_A_STACK_DOES_NOT_CONTAIN_VARIABLES_TO_POP              "EA-0x100F"
 #define ERR_A_VARIBALE_DOES_NOT_EXIST                              "EA-0x1010"
 #define ERR_A_THERE_ARE_NO_STACK_LAYERS_TO_BE_CLOSED               "EA-0x1011"
+#define ERR_A_UNKNOWN_TYPE                                         "EA-0x1012"
 

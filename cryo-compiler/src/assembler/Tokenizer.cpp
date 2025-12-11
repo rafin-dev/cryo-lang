@@ -64,7 +64,7 @@ namespace Cryo::Assembler {
 				}
 				break;
 
-			case '%':
+			case '@':
 				if (j == 0)
 				{
 					token_vec[token_index].type = TokenType::Type;
