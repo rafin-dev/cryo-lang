@@ -88,7 +88,13 @@ namespace Cryo {
           m_ProgramCounter++;
           uint32_t str_index = *m_ProgramCounter;
 
-          m_Stack.get_variable<uint32_t>(var_index) = str_index;
+          auto result = m_CurrentFunction->OwnerAssembly->get_string_literal(str_index);
+          if (!result.has_value())
+          {
+            throw std::logic_error("Fatal Error: Invalid String literal!");
+          }
+
+          m_Stack.get_variable<const char*>(var_index) = result.value().data();
 
           break;
         }

@@ -33,7 +33,7 @@ namespace Cryo::Assembler {
 		file.read(m_Buffer.get(), m_BufferSize);
 
 		// By default, the .cryoInt file will be besides the .cryoAsm
-		m_OutputFile = m_FilePath.replace_extension(".cryoInt");
+		m_OutputFile = m_FilePath.replace_extension(".cryi");
 	}
 
 	void Assembler::assemble(ErrorQueue& errors)
@@ -323,34 +323,6 @@ namespace Cryo::Assembler {
           current_token++;
           uint32_t value = std::stoul(std::string(m_Tokens[current_token].tokenText));
           func.Instructions.emplace_back(value);
-        }
-        break;
-
-      case CryoOpcode::PRINTU32:
-        {
-          const VariableData* data = variables.get_variable(m_Tokens[current_token].tokenText);
-          if (!data)
-          {
-            PUSH_ERROR(errors, ERR_A_VARIBALE_DOES_NOT_EXIST, current_token);
-            return;
-          }
-          func.Instructions.emplace_back(data->Position);
-        }
-        break;
-
-      case CryoOpcode::PRINTSTR:
-        {
-          uint32_t string_index = 0;
-          for (auto& str : m_StringLiterals)
-          {
-            if (str == m_Tokens[current_token].tokenText)
-            {
-              break;
-            }
-            string_index++;
-          }
-
-          func.Instructions.emplace_back(string_index);
         }
         break;
 

@@ -1,7 +1,7 @@
 fn $main @void -> @void
 {
-  PUSH 4 $str;
+  PUSH 8 $str;
   SETSTR $str "Hello, World!";
-  IMPL $void::println_str::uint32;
+  IMPL $void::println_str::void*;
   RETURN;
 }

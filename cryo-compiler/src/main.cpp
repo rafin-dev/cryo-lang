@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
     }
 
     std::filesystem::path path(argv[1]);
-    if (!std::filesystem::exists(path) || path.extension() != ".cryoAsm")
+    if (!std::filesystem::exists(path) || path.extension() != ".crya")
     {
         spdlog::critical("Invalid file: [{0}]!", path.string());
         return -1;

@@ -11,7 +11,7 @@ namespace Cryo {
 		uint16_t failed = false;
 		failed |= (!std::filesystem::exists(m_AssemblyPath)) << 0;
 		failed |= (!std::filesystem::is_regular_file(m_AssemblyPath)) << 1;
-		failed |= (path.extension() != ".cryoExe") << 2;
+		failed |= (path.extension() != ".crye") << 2;
 		if (failed)
 		{
 			std::cout << "Failed to load CryoAssembly at [" << m_AssemblyPath.string() << "]: ";
