@@ -9,7 +9,6 @@
 #include <stdexcept>
 #include <format>
 #include <string_view>
-#include <strings.h>
 
 namespace Cryo {
 
