@@ -1,4 +1,5 @@
 #include "cryopch.h"
+#include <utility>
 #include "InstructionSet.h"
 
 namespace Cryo::Assembler {
@@ -28,6 +29,7 @@ namespace Cryo::Assembler {
    
     { std::make_pair("SETU32", std::vector{ TokenType::ID, TokenType::Integer }), CryoOpcode::SETU32 },
     { std::make_pair("PRINTU32", std::vector{ TokenType::ID }), CryoOpcode::PRINTU32 },
+    { std::make_pair("PRINTSTR", std::vector{ TokenType::StringLiteral }), CryoOpcode::PRINTSTR },
 
     { std::make_pair("RETURN", std::vector<TokenType>{} ), CryoOpcode::RETURN },
     { std::make_pair("CALL", std::vector{ TokenType::ID } ), CryoOpcode::CALL_from_assembly_signature }
@@ -42,6 +44,7 @@ namespace Cryo::Assembler {
     
     "SETU32",
     "PRINTU32",
+    "PRINTSTR",
     
     "RETURN",
     "CALL"

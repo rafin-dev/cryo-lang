@@ -19,5 +19,6 @@ fn $test @uint32 -> @uint32
   PRINTU32 $param_0;
 
   SETU32 $return 15;
+  PRINTSTR "Hello, World!";
   RETURN;
 }

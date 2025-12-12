@@ -6,6 +6,9 @@
 #include <iostream>
 #include <iterator>
 #include <ostream>
+#include <stdexcept>
+#include <format>
+#include <strings.h>
 
 namespace Cryo {
 
@@ -32,7 +35,7 @@ namespace Cryo {
 				{
           if (!m_Stack.end_stack_layer())
           {
-            std::cout << "Fatal Error: Invalid CryoAssembly, atempt by [" << m_CurrentFunction->FunctionSignature << "] to end non existent stack layer!" << std::endl;
+            throw std::logic_error(std::format("Fatal Error: Invalid CryoAssembly, atmept by [{}] to end non existent stack layer!", m_CurrentFunction->FunctionSignature));
           }
 
 					break;
@@ -44,7 +47,7 @@ namespace Cryo {
 					uint32_t size = *m_ProgramCounter;
 					if (!m_Stack.push_variable(size))
 					{
-						// TODO: Exceptions
+						// TODO: CryoExceptions
 						std::cout << "Stack overflow exception!" << std::endl;
 						return;
 					}
@@ -59,7 +62,7 @@ namespace Cryo {
           uint32_t count = *m_ProgramCounter;
           if (!m_Stack.pop_variable(count))
           {
-            std::cout << "Fatal Error: Invalid CryoAssembly, atempt by [" << m_CurrentFunction->FunctionSignature << "] to pop non existent variable!" << std::endl;
+            throw std::logic_error(std::format("Fatal Error: Invalid CryoAssembly, atempt by [{}] to pop non existent variable!", m_CurrentFunction->FunctionSignature));
           }
 
           break;
@@ -83,6 +86,20 @@ namespace Cryo {
           uint32_t index = *m_ProgramCounter;
           uint32_t value = m_Stack.get_variable<uint32_t>(index);
           std::cout << "Printing [" << value << "]!" << std::endl;
+          break;
+        }
+
+      case PRINTSTR:
+        {
+          m_ProgramCounter++;
+          uint32_t str_index = *m_ProgramCounter;
+          auto result = m_CurrentFunction->OwnerAssembly->get_string_literal(str_index);
+          if (!result.has_value())
+          {
+            throw std::logic_error(std::format("Fatal Error: Inavlid CryoAssembly, string literal at index [{}] does not exist!", str_index));
+          }
+          std::cout << result.value() << std::endl;
+
           break;
         }
 
@@ -110,17 +127,14 @@ namespace Cryo {
 					auto result = m_CurrentFunction->OwnerAssembly->get_string_literal(signature_index);
 					if (!result.has_value())
 					{
-						std::cout << "Fatal Error: Invalid CryoAssembly, atempt by [" << m_CurrentFunction->FunctionSignature << "] to call non existent function!" << std::endl;
-						return;
-					}
+					  throw std::logic_error(std::format("Fatal Errro: Invalid CryoAssembly, atempt by [{}] to call non existent function!", m_CurrentFunction->FunctionSignature));
+          }
 
 					const CryoFunction* function = m_CurrentFunction->OwnerAssembly->get_function_by_signature(std::string(result.value()));
 				if (!function) // Function not found, invalid assembly
 					{
-						std::cout << "Fatal Error: Invalid CryoAssembly, atempt to call invalid function [" << result.value() << "]!" << std::endl;
-						clear();
-						return;
-					}
+					  throw new std::logic_error(std::format("Fatal Error: Invalid CryoAssembly, atempt to call invalid function [{}]!", result.value()));
+          }
 
 					m_Stack.push_call_stack(m_CurrentFunction, function, m_ProgramCounter);
 					m_CurrentFunction = function;

@@ -26,7 +26,8 @@ namespace Cryo {
 	  { ERR_A_STACK_DOES_NOT_CONTAIN_VARIABLES_TO_POP,                  { "Stack does not contain variables to pop!",                  Error::level_error } },
     { ERR_A_VARIBALE_DOES_NOT_EXIST,                                  { "Variable does not exist!",                                  Error::level_error } },
     { ERR_A_THERE_ARE_NO_STACK_LAYERS_TO_BE_CLOSED,                   { "There are no StackLayers to be closed!",                    Error::level_error } },
-    { ERR_A_UNKNOWN_TYPE,                                             { "Unknown type used!",                                        Error::level_error } }
+    { ERR_A_UNKNOWN_TYPE,                                             { "Unknown type used!",                                        Error::level_error } },
+    { ERR_A_STRING_LITERAL_MISSING_END,                               { "String literal missing end!",                               Error::level_error } }
   };
 
 	Error::Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token)
@@ -40,7 +41,7 @@ namespace Cryo {
 		}
 		if (token.data() < file_buffer)
 		{
-			spdlog::critical("Catastrophic internal failure: Token is not part of file_buffer!");
+        spdlog::critical("Catastrophic internal failure: Token is not part of file_buffer! {1} {0}", error_code, token);
 			std::terminate();
 		}
 

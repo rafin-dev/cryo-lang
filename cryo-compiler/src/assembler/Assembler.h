@@ -52,7 +52,7 @@ namespace Cryo::Assembler {
 
 		// Output
 		std::filesystem::path m_OutputFile;
-		std::set<std::string> m_IDs;
+    std::set<std::string> m_StringLiterals;
 		std::unordered_map<std::string, Function> m_Functions;
 
 		// File

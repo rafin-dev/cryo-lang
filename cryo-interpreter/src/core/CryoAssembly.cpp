@@ -1,6 +1,7 @@
 #include "cryopch.h"
-#include <ostream>
 #include "CryoAssembly.h"
+
+#include <ostream>
 
 namespace Cryo {
 

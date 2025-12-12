@@ -1,10 +1,14 @@
+#include "assembler/Token.h"
+#include "common/Error.h"
 #include "cryopch.h"
 #include "Tokenizer.h"
 
 #include "InstructionSet.h"
 #include "Instructions.h"
 
+#include <ostream>
 #include <spdlog/spdlog.h>
+#include <string_view>
 
 namespace Cryo::Assembler {
 
@@ -22,16 +26,42 @@ namespace Cryo::Assembler {
 			char character = m_Buffer[i];
 			const char* token_start = nullptr;
 			uint32_t token_size = 0;
+      bool was_inserted = false;
 
 			// Separate 'words'
 			while (character != ' ' && character != '\n' && character != '\r' && character != '\t' && i < m_BufferSize)
 			{
+        if (character == '"')
+        {
+          token_start = m_Buffer + i + 1;
+          bool found_end = false;
+          for (i++; i < m_BufferSize; i++)
+          {
+            character = m_Buffer[i];
+            if (character == '"')
+            {
+              found_end = true;
+              break;
+            }
+            token_size++;
+          }
+          if (!found_end)
+          {
+            errors.push_error(ERR_A_STRING_LITERAL_MISSING_END, m_FilePath, m_Buffer, m_BufferSize, token_vec.back().tokenText);
+            return token_vec;
+          }
+
+          token_vec.emplace_back(TokenType::StringLiteral, std::string_view(token_start, token_size));
+          was_inserted = true;
+          break;
+        }
+
 				if (!token_start) { token_start = m_Buffer + i; }
 				i++;
 				token_size++;
 				character = m_Buffer[i];
 			}
-			if (token_size == 0) { continue; }
+			if (token_size == 0 || was_inserted) { continue; }
 
 			token_vec.emplace_back(TokenType::None, std::string_view(token_start, token_size));
 			uint32_t token = token_vec.size() - 1;
@@ -112,7 +142,6 @@ namespace Cryo::Assembler {
 	{
 		{ "fn", TokenType::FunctionDeclaration },
 		{ "->", TokenType::ReturnTypeDeclaration },
-		{ ",", TokenType::Comma },
 		{ "{", TokenType::StartBody },
 		{ "}", TokenType::EndBody },
 		{ ";", TokenType::EndCommand }

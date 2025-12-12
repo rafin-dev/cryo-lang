@@ -20,6 +20,7 @@ namespace Cryo {
 
     SETU32   = 0x0000005,
     PRINTU32 = 0x0000006,
+    PRINTSTR = 0x0000007,
 
 		/// Return: 4 bytes opcode
 		RETURN = 0x01000000,

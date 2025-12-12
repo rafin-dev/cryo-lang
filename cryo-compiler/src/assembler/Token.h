@@ -17,7 +17,6 @@ namespace Cryo::Assembler {
 		ReturnTypeDeclaration, // ->
 		
 		Type, // uint32, int32...
-		Comma, // ,
 
 		Instruction, // PUSH, POP, CALL...
 		EndCommand, // ;

@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <exception>
+#include <string>
 #include <tuple>
 
 #define PUSH_ERROR(error_list, error, token_index) error_list.push_error(error, m_FilePath, m_Buffer.get(), m_BufferSize, m_Tokens[(token_index)].tokenText)
@@ -46,13 +47,22 @@ namespace Cryo::Assembler {
 
 		for (int i = 1; i < m_Tokens.size(); i++)
 		{
-			if (m_Tokens[i].type == TokenType::ID)
-			{
-				if (m_Tokens[i - 1].type != TokenType::FunctionDeclaration)
-				{
-					m_IDs.insert(std::string(m_Tokens[i].tokenText));
-				}
-			}
+      switch (m_Tokens[i].type) 
+      {
+        case TokenType::ID:
+          if (m_Tokens[i - 1].type != TokenType::FunctionDeclaration)
+          {
+            m_StringLiterals.insert(std::string(m_Tokens[i].tokenText));
+          }
+          break;
+
+        case TokenType::StringLiteral:
+          m_StringLiterals.insert(std::string(m_Tokens[i].tokenText));
+          break;
+
+        default:
+          break;
+      }
 		}
 
 		for (uint32_t i = 0; i < m_Tokens.size(); i++)
@@ -187,7 +197,7 @@ namespace Cryo::Assembler {
     }
     
 		func.Signature = "$" + std::string(m_Tokens[current_token].tokenText.data() + 1, m_Tokens[current_token].tokenText.size() - 1) + "::" + func.Signature;
-		m_IDs.insert(func.Signature);
+		m_StringLiterals.insert(func.Signature);
 		return func;
 	}
 
@@ -260,11 +270,11 @@ namespace Cryo::Assembler {
     current_token = instruction + 1; // First parameter
     switch (opcode)
     {
-      case (CryoOpcode::STLS):
+      case CryoOpcode::STLS:
         variables.start_stack_layer();
         break;
 
-      case (CryoOpcode::STLE):
+      case CryoOpcode::STLE:
         if (!variables.end_stack_layer())
         {
           PUSH_ERROR(errors, ERR_A_THERE_ARE_NO_STACK_LAYERS_TO_BE_CLOSED, instruction);
@@ -272,7 +282,7 @@ namespace Cryo::Assembler {
         }
         break;
 
-      case (CryoOpcode::PUSH):
+      case CryoOpcode::PUSH:
         {
            uint32_t size = std::stoul(std::string(m_Tokens[current_token].tokenText)); // Size in bytes to be pushed
            func.Instructions.emplace_back(size);
@@ -285,7 +295,7 @@ namespace Cryo::Assembler {
         }
         break;
 
-      case (CryoOpcode::POP):
+      case CryoOpcode::POP:
         {
           uint32_t count = std::stoul(std::string(m_Tokens[current_token].tokenText));
           func.Instructions.emplace_back(count);
@@ -300,7 +310,7 @@ namespace Cryo::Assembler {
         }
         break;
 
-      case (CryoOpcode::SETU32):
+      case CryoOpcode::SETU32:
         {
           const VariableData* data = variables.get_variable(m_Tokens[current_token].tokenText);
           if (!data)
@@ -316,7 +326,7 @@ namespace Cryo::Assembler {
         }
         break;
 
-      case (CryoOpcode::PRINTU32):
+      case CryoOpcode::PRINTU32:
         {
           const VariableData* data = variables.get_variable(m_Tokens[current_token].tokenText);
           if (!data)
@@ -328,10 +338,26 @@ namespace Cryo::Assembler {
         }
         break;
 
-      case (CryoOpcode::CALL_from_assembly_signature):
+      case CryoOpcode::PRINTSTR:
+        {
+          uint32_t string_index = 0;
+          for (auto& str : m_StringLiterals)
+          {
+            if (str == m_Tokens[current_token].tokenText)
+            {
+              break;
+            }
+            string_index++;
+          }
+
+          func.Instructions.emplace_back(string_index);
+        }
+        break;
+
+      case CryoOpcode::CALL_from_assembly_signature:
         {
           uint32_t sig_index = 0;
-          for (auto ite = m_IDs.begin(); *ite != m_Tokens[current_token].tokenText; ite = std::next(ite))
+          for (auto ite = m_StringLiterals.begin(); *ite != m_Tokens[current_token].tokenText; ite = std::next(ite))
           {
             sig_index++;
           }
@@ -368,10 +394,10 @@ namespace Cryo::Assembler {
 
 		// String literals
 		uint32_t string_literals_size = 0;
-		for (auto& id : m_IDs)
+		for (auto& str : m_StringLiterals)
 		{
-			file_stream << id << '\0';
-			string_literals_size += id.size() + 1;
+			file_stream << str << '\0';
+			string_literals_size += str.size() + 1;
 		}
 		for (uint32_t spacing = sizeof(uint32_t) - (string_literals_size % sizeof(uint32_t)); spacing > 0; spacing--) // Align back into a list of uint32_t's
 		{
@@ -385,7 +411,7 @@ namespace Cryo::Assembler {
 		for (auto& func : m_Functions)
 		{
 			uint32_t signature_id = 0;
-			for (auto& ite : m_IDs) { if (func.second.Signature == ite) { break; } signature_id++; }
+			for (auto& ite : m_StringLiterals) { if (func.second.Signature == ite) { break; } signature_id++; }
 			
 			// Signature string literal index
 			WRITE_BINARY(file_stream, signature_id);
