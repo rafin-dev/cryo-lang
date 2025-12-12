@@ -8,6 +8,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <format>
+#include <string_view>
 #include <strings.h>
 
 namespace Cryo {
@@ -80,25 +81,14 @@ namespace Cryo {
           break;
         }
 
-      case PRINTU32:
+      case SETSTR:
         {
           m_ProgramCounter++;
-          uint32_t index = *m_ProgramCounter;
-          uint32_t value = m_Stack.get_variable<uint32_t>(index);
-          std::cout << "Printing [" << value << "]!" << std::endl;
-          break;
-        }
-
-      case PRINTSTR:
-        {
+          uint32_t var_index = *m_ProgramCounter;
           m_ProgramCounter++;
           uint32_t str_index = *m_ProgramCounter;
-          auto result = m_CurrentFunction->OwnerAssembly->get_string_literal(str_index);
-          if (!result.has_value())
-          {
-            throw std::logic_error(std::format("Fatal Error: Inavlid CryoAssembly, string literal at index [{}] does not exist!", str_index));
-          }
-          std::cout << result.value() << std::endl;
+
+          m_Stack.get_variable<uint32_t>(var_index) = str_index;
 
           break;
         }
@@ -127,7 +117,8 @@ namespace Cryo {
 					auto result = m_CurrentFunction->OwnerAssembly->get_string_literal(signature_index);
 					if (!result.has_value())
 					{
-					  throw std::logic_error(std::format("Fatal Errro: Invalid CryoAssembly, atempt by [{}] to call non existent function!", m_CurrentFunction->FunctionSignature));
+					  throw std::logic_error(std::format("Fatal Error: Invalid CryoAssembly, atempt by [{}] to call non existent function!", 
+                  m_CurrentFunction->FunctionSignature));
           }
 
 					const CryoFunction* function = m_CurrentFunction->OwnerAssembly->get_function_by_signature(std::string(result.value()));
@@ -142,6 +133,29 @@ namespace Cryo {
 
 					break;
 				}
+
+      case IMPL:
+        {
+          m_ProgramCounter++;
+          uint32_t sig_index = *m_ProgramCounter;
+          auto signature = m_CurrentFunction->OwnerAssembly->get_string_literal(sig_index);
+          if (!signature.has_value())
+          {
+            throw std::logic_error(std::format("Fatal Error: Invalid CryoAssembly, atempt by [{}] to call non existent IMPL function!", 
+                  m_CurrentFunction->FunctionSignature));
+          }
+
+          auto ite = s_ImplFunctions.find(std::string(signature.value()));
+          if (ite == s_ImplFunctions.end())
+          {
+            throw std::logic_error(std::format("Fatal Error: IMPL function [{}] does not exist!", signature.value()));
+          }
+          m_Stack.push_call_stack(m_CurrentFunction, &ite->second.FunctionData, m_ProgramCounter);
+          ite->second.Function(this);
+          m_Stack.pop_call_stack();
+
+          break;
+        }
 
 			default:
 				{	

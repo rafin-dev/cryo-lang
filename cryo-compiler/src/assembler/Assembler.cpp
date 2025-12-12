@@ -354,6 +354,31 @@ namespace Cryo::Assembler {
         }
         break;
 
+      case CryoOpcode::SETSTR:
+        {
+          const VariableData* data = variables.get_variable(m_Tokens[current_token].tokenText);
+          if (!data)
+          {
+            PUSH_ERROR(errors, ERR_A_VARIBALE_DOES_NOT_EXIST, current_token);
+            return;
+          }
+          func.Instructions.emplace_back(data->Position);
+          
+          current_token++;
+          uint32_t string_index = 0;
+          for (auto& str : m_StringLiterals)
+          {
+            if (str == m_Tokens[current_token].tokenText)
+            {
+              break;
+            }
+            string_index++;
+          }
+
+          func.Instructions.emplace_back(string_index);
+        }
+        break;
+
       case CryoOpcode::CALL_from_assembly_signature:
         {
           uint32_t sig_index = 0;
@@ -362,6 +387,21 @@ namespace Cryo::Assembler {
             sig_index++;
           }
 
+          func.Instructions.emplace_back(sig_index);
+        }
+        break;
+
+      case CryoOpcode::IMPL:
+        {
+          uint32_t sig_index = 0;
+          for (auto& str : m_StringLiterals)
+          {
+            if (str == m_Tokens[current_token].tokenText)
+            {
+              break;
+            }
+            sig_index++;
+          }
           func.Instructions.emplace_back(sig_index);
         }
         break;

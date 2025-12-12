@@ -19,15 +19,16 @@ namespace Cryo::Assembler {
     POP  = 0x00000004,
 
     SETU32   = 0x0000005,
-    PRINTU32 = 0x0000006,
-    PRINTSTR = 0x0000007,
+    SETSTR =   0x0000006,
 
 		/// Return: 4 bytes opcode
 		RETURN = 0x01000000,
 		/// Call function in the same assembly as the caller function, 4 bytes opcode, 4 bytes uint for function index
 		CALL_from_assembly_index = 0x02000000,
 		/// Call function in the same assembly as the caller function, 4 bytes opcode, 4 bytes uint for string literal index for the signature
-		CALL_from_assembly_signature = 0x30000000
-	};
+		CALL_from_assembly_signature = 0x03000000,
+	  // Calls function implemented by the interpreter
+    IMPL = 0x04000000
+  };
 
 }

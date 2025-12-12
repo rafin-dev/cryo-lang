@@ -3,6 +3,8 @@
 #include "CryoAssembly.h"
 #include "Stack.h"
 
+#include <unordered_map>
+#include <functional>
 #include <vector>
 #include <stack>
 
@@ -24,6 +26,16 @@ namespace Cryo {
 		const CryoFunction* m_CurrentFunction = nullptr;
 
     Stack m_Stack;
+
+    struct ImplFunction
+    {
+      CryoFunction FunctionData;
+      std::function<void(CryoThread*)> Function;
+    };
+
+    static std::unordered_map<std::string, ImplFunction> s_ImplFunctions;
+
+    void void_println_str_void();
 	};
 
 }
