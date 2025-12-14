@@ -23,7 +23,7 @@ namespace Cryo::Assembler {
   {
     { std::make_pair("STLS", std::vector<TokenType>{}), CryoOpcode::STLS },
     { std::make_pair("STLE", std::vector<TokenType>{}), CryoOpcode::STLE },
-    { std::make_pair("PUSH", std::vector{ TokenType::Integer, TokenType::ID }), CryoOpcode::PUSH },
+    { std::make_pair("PUSH", std::vector{ TokenType::Type, TokenType::ID }), CryoOpcode::PUSH },
     { std::make_pair("POP",  std::vector{ TokenType::Integer }), CryoOpcode::POP },
    
     { std::make_pair("SETU32", std::vector{ TokenType::ID, TokenType::Integer }), CryoOpcode::SETU32 },
@@ -50,5 +50,10 @@ namespace Cryo::Assembler {
     "CALL",
     "IMPL"
   };
+
+  //std::unordered_map<CryoOpcode, uint32_t> InstructionSet::s_InstrcutionSize = 
+  //{
+
+  //};
 
 }

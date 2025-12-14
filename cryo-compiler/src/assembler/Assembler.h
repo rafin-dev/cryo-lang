@@ -20,6 +20,7 @@ namespace Cryo::Assembler {
     Function(const std::string& sig, uint32_t func_start, uint32_t return_size, const std::vector<uint32_t>& parameters_sizes)
       : Signature(sig), Instructions(), FunctionStart(func_start), ReturnSize(return_size), ParametersSizes(parameters_sizes)
     {}
+    Function(const Function& other) = default;
 
 		std::string Signature;
 		std::vector<uint32_t> Instructions;

@@ -1,4 +1,4 @@
-project "CryoCompiler"
+project "CryoC"
     kind "ConsoleApp"
     language "c++"
     cppdialect "c++23"
@@ -21,5 +21,6 @@ project "CryoCompiler"
     includedirs
     {
         "%{prj.location}/src",
-        "%{prj.location}/vendor/spdlog/include"
+        "%{prj.location}/vendor/spdlog/include",
+        "%{prj.location}/vendor/toml"
     }

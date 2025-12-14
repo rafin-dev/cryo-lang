@@ -1,13 +1,16 @@
 #include "cryopch.h"
 #include "Error.h"
 
+#include <iterator>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/bundled/color.h>
+#include <string>
 
 namespace Cryo {
 
 	std::unordered_map<std::string_view, Error::ErrorData> Error::s_ErrorTexts =
 	{
+    // Assembler Errors
 		{ CRI_A_ASSEMBLY_FILE_DOES_NOT_EXIST,                             { "Cryo Assembly file does not exist!",                        Error::level_critical } },
 		{ ERR_A_INVALID_CHARACTER_IN_ID_OR_TYPE,                          { "Invalid character in Cryo Assembly Identifier/Type!",       Error::level_error } },
 		{ ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE,                           { "Could not determine token type!",                           Error::level_error } },
@@ -27,7 +30,12 @@ namespace Cryo {
     { ERR_A_VARIBALE_DOES_NOT_EXIST,                                  { "Variable does not exist!",                                  Error::level_error } },
     { ERR_A_THERE_ARE_NO_STACK_LAYERS_TO_BE_CLOSED,                   { "There are no StackLayers to be closed!",                    Error::level_error } },
     { ERR_A_UNKNOWN_TYPE,                                             { "Unknown type used!",                                        Error::level_error } },
-    { ERR_A_STRING_LITERAL_MISSING_END,                               { "String literal missing end!",                               Error::level_error } }
+    { ERR_A_STRING_LITERAL_MISSING_END,                               { "String literal missing end!",                               Error::level_error } },
+
+    // Linker Errors
+    { ERR_L_UNABLE_TO_OPEN_FILE,                                      { "Failed to open file!",                                      Error::level_error } },
+    { ERR_L_UNABLE_TO_VALIDATE_HEADER,                                { "Failed to validate header!",                                Error::level_error } },
+    { ERR_L_UNEXPECTED_FILE_END,                                      { "Unexpected file end!",                                      Error::level_error } }
   };
 
 	Error::Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token)
@@ -50,6 +58,10 @@ namespace Cryo {
 		ErrorSeverity = ite->second.ErrorSeverity;
 
 		FilePath = file_path;
+    if (file_buffer == nullptr) // Linker errors do not have any file to show
+    {
+      return;
+    }
 
 		// Get the line and make a string_view for the token
 		const char* line_start = token.data();
@@ -105,31 +117,45 @@ namespace Cryo {
 			std::terminate();
 		}
 
-		auto code = std::string(ErrorCode);
-		spdlog::log(log_level, "{0} {1} at line {2}:[ {3}{4}{5} ]",
-			code,
-			FilePath.string(),
-			LineNumber,
-			std::string((const char*)ErrorLine.data(), TokenText.data()),
-			fmt::format(fmt::fg(fmt::terminal_color::red) | fmt::emphasis::bold, "{0}", std::string(TokenText)),
-			std::string(TokenText.data() + TokenText.size(), (const char*)ErrorLine.data() + ErrorLine.size()));
+    auto code = std::string(ErrorText);
+    if (!TokenText.empty()) // Compiler/Assembler error
+    {
+		  spdlog::log(log_level, "{0} {1} at line {2}:[ {3}{4}{5} ]",
+			  code,
+			  FilePath.string(),
+			  LineNumber,
+			  std::string((const char*)ErrorLine.data(), TokenText.data()),
+			  fmt::format(fmt::fg(fmt::terminal_color::red) | fmt::emphasis::bold, "{0}", std::string(TokenText)),
+			  std::string(TokenText.data() + TokenText.size(), (const char*)ErrorLine.data() + ErrorLine.size()));
 
-		spdlog::log(log_level, "{0} {1} at line {2}: {3}", code, FilePath.string(), LineNumber, ErrorText);
+		  spdlog::log(log_level, "{0} {1} at line {2}: {3}", code, FilePath.string(), LineNumber, ErrorText);
+    }
+    else // Linker error
+    {
+      spdlog::log(log_level, "{0} at file {1}: {2}", code, FilePath.string(), ErrorText);
+    }
 	}
 
 	void ErrorQueue::push_error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token)
 	{
-		auto& err = m_Errrors.emplace(error_code, file_path, file_buffer, buffer_size, token);
+		auto& err = m_Errrors.emplace_back(error_code, file_path, file_buffer, buffer_size, token);
 		if (err.ErrorSeverity > m_Severity) { m_Severity = err.ErrorSeverity; }
 	}
 
 	void ErrorQueue::log()
 	{
-		while (m_Errrors.size())
-		{
-			m_Errrors.front().log();
-			m_Errrors.pop();
-		}
+    for (auto& err : m_Errrors)
+    {
+      err.log();
+    }
+    m_Errrors.clear();
 	}
+
+  void ErrorQueue::merge(ErrorQueue& other)
+  {
+    if (other.m_Severity > m_Severity) { m_Severity = other.m_Severity; }
+    m_Errrors.insert(m_Errrors.end(), std::make_move_iterator(other.m_Errrors.begin()), std::make_move_iterator(other.m_Errrors.end()));
+    other.m_Severity = Error::level_none;
+  }
 
 }

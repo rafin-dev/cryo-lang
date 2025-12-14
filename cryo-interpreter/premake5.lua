@@ -1,4 +1,4 @@
-project "CryoInterpreter"
+project "Cryo"
     kind "ConsoleApp"
     language "c++"
     cppdialect "c++23"

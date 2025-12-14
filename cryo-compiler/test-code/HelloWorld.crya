@@ -1,7 +1,0 @@
-fn $main @void -> @void
-{
-  PUSH 8 $str;
-  SETSTR $str "Hello, World!";
-  IMPL $void::println_str::void*;
-  RETURN;
-}

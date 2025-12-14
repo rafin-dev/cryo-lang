@@ -27,7 +27,7 @@ namespace Cryo {
 		/// </summary>
 		std::filesystem::path FilePath;
 		/// <summary>
-		/// Line conatining the error
+		/// Line containing the error
 		/// </summary>
 		std::string ErrorLine;
 		uint32_t LineNumber = 1;
@@ -74,14 +74,17 @@ namespace Cryo {
 	class ErrorQueue
 	{
 	public:
-		void push_error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token);
+		void push_error(std::string_view error_code, const std::filesystem::path& file_path, 
+        const char* file_buffer = nullptr, uint32_t buffer_size = 0, std::string_view token = std::string_view());
 		void log();
 
 		Error::Severity get_severity() { return m_Severity; }
 
+    void merge(ErrorQueue& other);
+
 	private:
 		Error::Severity m_Severity = Error::level_none;
-		std::queue<Error> m_Errrors;
+		std::vector<Error> m_Errrors;
 	};
 
 }
@@ -112,3 +115,7 @@ namespace Cryo {
 #define ERR_A_UNKNOWN_TYPE                                         "EA-0x1012"
 #define ERR_A_STRING_LITERAL_MISSING_END                           "EA-0x1013"
 
+// Linker Errors
+#define ERR_L_UNABLE_TO_OPEN_FILE                                  "EL-0x1000"
+#define ERR_L_UNABLE_TO_VALIDATE_HEADER                            "EL-0x1001"
+#define ERR_L_UNEXPECTED_FILE_END                                  "EL-0x1002"

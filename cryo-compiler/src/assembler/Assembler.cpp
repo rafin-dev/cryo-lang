@@ -8,6 +8,7 @@
 #include "Tokenizer.h"
 #include "TypeList.h"
 
+#include <iterator>
 #include <optional>
 #include <spdlog/spdlog.h>
 
@@ -284,14 +285,21 @@ namespace Cryo::Assembler {
 
       case CryoOpcode::PUSH:
         {
-           uint32_t size = std::stoul(std::string(m_Tokens[current_token].tokenText)); // Size in bytes to be pushed
-           func.Instructions.emplace_back(size);
-           current_token++;
-           if (!variables.push_variable(m_Tokens[current_token].tokenText, size)) // Register variable
-           {
-             PUSH_ERROR(errors, ERR_A_VARIABLE_NAME_ALREDY_IN_USE, current_token);
-             return;
-           }
+          std::string_view type = m_Tokens[current_token].tokenText;
+          auto result = TypeList::get_size_from_type(type);
+          if (!result.has_value())
+          {
+            PUSH_ERROR(errors, ERR_A_UNKNOWN_TYPE, current_token);
+            return;
+          }
+
+          func.Instructions.emplace_back(result.value());
+          current_token++;
+          if (!variables.push_variable(m_Tokens[current_token].tokenText, result.value())) // Register variable
+          {
+            PUSH_ERROR(errors, ERR_A_VARIABLE_NAME_ALREDY_IN_USE, current_token);
+            return;
+          }
         }
         break;
 
@@ -397,7 +405,7 @@ namespace Cryo::Assembler {
 		constexpr uint32_t block_end = std::numeric_limits<uint32_t>::max();
 
 		// Header
-		constexpr const char* header_string = "CRYOEXE";
+		constexpr const char* header_string = "CRYOINT";
 		for (int i = 0; header_string[i] != 0; i++)
 		{
 			file_stream << header_string[i];

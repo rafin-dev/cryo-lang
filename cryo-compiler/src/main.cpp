@@ -5,31 +5,22 @@
 #include "assembler/Assembler.h"
 #include "assembler/TypeList.h"
 
+#include "environment/CompilationEnvironment.h"
+
 int main(int argc, const char** argv)
 {
-    spdlog::set_pattern("[%H:%M:%S|%z|%l] %v");
-    if (argc < 2) 
-    {
-        spdlog::critical("Missing arguments!");
-        return -1;
-    }
-
-    std::filesystem::path path(argv[1]);
-    if (!std::filesystem::exists(path) || path.extension() != ".crya")
-    {
-        spdlog::critical("Invalid file: [{0}]!", path.string());
-        return -1;
-    }
-
     // TODO: deal with more arguments
-    Cryo::Assembler::TypeList::clear_custom_types();
-    Cryo::ErrorQueue errors;
-    Cryo::Assembler::Assembler assembler(argv[argc - 1]);
+    //Cryo::Assembler::TypeList::clear_custom_types();
+    //Cryo::ErrorQueue errors;
+    //Cryo::Assembler::Assembler assembler(argv[argc - 1]);
 
-    assembler.assemble(errors);
-    if (errors.get_severity() != Cryo::Error::level_none)
+    Cryo::CompilationEnvironment environment;
+    return environment.execute_action(argc, argv);
+
+    //assembler.assemble(errors);
+    //if (errors.get_severity() != Cryo::Error::level_none)
     {
-        errors.log();
+        //errors.log();
         return -2;
     }
     spdlog::info("Compilation finished successfully!");
