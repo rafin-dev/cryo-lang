@@ -125,6 +125,8 @@ namespace Cryo {
     
     // Assembler
     std::vector<std::future<ErrorQueue>> results(std::thread::hardware_concurrency());
+    spdlog::info("Starting compilation with {0} cores!", results.size());
+
     std::queue<std::filesystem::path> files;
     for (auto entry : std::filesystem::recursive_directory_iterator(wks_dir / "bin/int"))
     {
@@ -139,8 +141,9 @@ namespace Cryo {
       auto& thread = results[i];
       if (!thread.valid())
       {
-        spdlog::info("Assembling {0}", files.back().string());
-        thread = std::async(&assemble_file, files.back());
+        std::filesystem::path file = files.front();
+        spdlog::info("Assembling {0}", file.string());
+        thread = std::async(&assemble_file, file);
         files.pop();
       }
       else 
@@ -159,15 +162,23 @@ namespace Cryo {
     {
       if (thread.valid())
       {
-        thread.wait();
         ErrorQueue queue = thread.get();
         errors.merge(queue);
       }
     }
+    if (errors.get_severity() == Error::level_critical)
+    {
+      return -1;
+    }
 
+    spdlog::info("Linking...");
     // TODO: Linker
 
     errors.log();
+    if (errors.get_severity() < Error::level_error)
+    {
+      spdlog::info("Compilation finished successfully!");
+    }
 
     return 0;
   }
