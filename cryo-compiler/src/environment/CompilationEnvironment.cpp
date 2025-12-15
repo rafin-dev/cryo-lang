@@ -4,6 +4,7 @@
 #include "common/Error.h"
 #include "assembler/TypeList.h"
 #include "assembler/Assembler.h"
+#include "linker/Linker.h"
 
 #include <chrono>
 #include <future>
@@ -136,7 +137,7 @@ namespace Cryo {
       }
       files.push(entry.path());
     }
-    for (int i = 0, done_count = 0; !files.empty(); i++)
+    for (int i = 0; !files.empty(); i++)
     {
       auto& thread = results[i];
       if (!thread.valid())
@@ -166,7 +167,8 @@ namespace Cryo {
         errors.merge(queue);
       }
     }
-    if (errors.get_severity() == Error::level_critical)
+    errors.log();
+    if (errors.get_severity() > Error::level_warning)
     {
       return -1;
     }
@@ -174,8 +176,11 @@ namespace Cryo {
     spdlog::info("Linking...");
     // TODO: Linker
 
-    errors.log();
-    if (errors.get_severity() < Error::level_error)
+    Linker::Linker linker;
+    auto link_errors = linker.link_project(wks_dir / "bin/int", wks_dir / "bin");
+
+    link_errors.log();
+    if (link_errors.get_severity() < Error::level_error)
     {
       spdlog::info("Compilation finished successfully!");
     }
