@@ -155,8 +155,8 @@ namespace Cryo {
           errors.merge(queue);
         }
       }
-
-      i = i % results.size();
+      
+      i = i % (results.size() - 1);
     }
     for (auto& thread : results)
     {
