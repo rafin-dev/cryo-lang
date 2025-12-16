@@ -11,7 +11,8 @@ namespace Cryo {
 
 	struct Error
 	{
-		Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token);
+		Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token,
+        const std::string& aditional_msg);
 
 		/// <summary>
 		/// Code specifying the error
@@ -35,6 +36,8 @@ namespace Cryo {
 		/// Specific token containing the error (the owner string is ErrorLine)
 		/// </summary>
 		std::string_view TokenText;
+
+    std::string AditionalMessage;
 
 		enum Severity
 		{
@@ -75,7 +78,8 @@ namespace Cryo {
 	{
 	public:
 		void push_error(std::string_view error_code, const std::filesystem::path& file_path, 
-        const char* file_buffer = nullptr, uint32_t buffer_size = 0, std::string_view token = std::string_view());
+        const char* file_buffer = nullptr, uint32_t buffer_size = 0, std::string_view token = std::string_view(),
+        const std::string& aditional_msg = std::string());
 		void log();
 
 		Error::Severity get_severity() { return m_Severity; }
@@ -119,3 +123,5 @@ namespace Cryo {
 #define ERR_L_UNABLE_TO_OPEN_FILE                                  "EL-0x1000"
 #define ERR_L_UNABLE_TO_VALIDATE_HEADER                            "EL-0x1001"
 #define ERR_L_UNEXPECTED_FILE_END                                  "EL-0x1002"
+#define ERR_L_UNRESOLVED_EXTERNAL_REFRENCE                         "EL-0x1003"
+#define ERR_L_SYMBOL_REDEFINITION                                  "EL-0x1004"

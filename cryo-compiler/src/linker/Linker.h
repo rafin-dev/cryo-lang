@@ -28,6 +28,7 @@ namespace Cryo::Linker {
     std::unordered_map<std::filesystem::path, std::unordered_map<uint32_t, uint32_t>> m_OldStrIndexToNewStrIndex;
 
     std::unordered_map<std::filesystem::path, std::unordered_map<std::string, Assembler::Function>> m_Functions;
+    std::unordered_set<std::string> m_FunctionSignatures;
   };
 
 }

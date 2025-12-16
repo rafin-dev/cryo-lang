@@ -33,12 +33,15 @@ namespace Cryo {
     { ERR_A_STRING_LITERAL_MISSING_END,                               { "String literal missing end!",                               Error::level_error } },
 
     // Linker Errors
-    { ERR_L_UNABLE_TO_OPEN_FILE,                                      { "Failed to open file!",                                      Error::level_error } },
+    { ERR_L_UNABLE_TO_OPEN_FILE,                                      { "Failed to open file!",                                      Error::level_critical } },
     { ERR_L_UNABLE_TO_VALIDATE_HEADER,                                { "Failed to validate header!",                                Error::level_error } },
-    { ERR_L_UNEXPECTED_FILE_END,                                      { "Unexpected file end!",                                      Error::level_error } }
+    { ERR_L_UNEXPECTED_FILE_END,                                      { "Unexpected file end!",                                      Error::level_error } },
+    { ERR_L_UNRESOLVED_EXTERNAL_REFRENCE,                             { "Unresolved external reference!",                            Error::level_error } },
+    { ERR_L_SYMBOL_REDEFINITION,                                      { "Symbol has multiple definitions!",                          Error::level_error } }
   };
 
-	Error::Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token)
+	Error::Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token,
+      const std::string& aditional_msg)
 	{
 		// Validate error code
 		auto ite = s_ErrorTexts.find(error_code);
@@ -56,6 +59,8 @@ namespace Cryo {
 		ErrorCode = error_code;
 		ErrorText = ite->second.ErrorText;
 		ErrorSeverity = ite->second.ErrorSeverity;
+
+    AditionalMessage = aditional_msg;
 
 		FilePath = file_path;
     if (file_buffer == nullptr) // Linker errors do not have any file to show
@@ -117,7 +122,7 @@ namespace Cryo {
 			std::terminate();
 		}
 
-    auto code = std::string(ErrorText);
+    auto code = std::string(ErrorCode);
     if (!TokenText.empty()) // Compiler/Assembler error
     {
 		  spdlog::log(log_level, "{0} {1} at line {2}:[ {3}{4}{5} ]",
@@ -134,11 +139,17 @@ namespace Cryo {
     {
       spdlog::log(log_level, "{0} at file {1}: {2}", code, FilePath.string(), ErrorText);
     }
+
+    if (!AditionalMessage.empty())
+    {
+      spdlog::info("{0}", AditionalMessage);
+    }
 	}
 
-	void ErrorQueue::push_error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token)
+	void ErrorQueue::push_error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token,
+      const std::string& aditional_msg)
 	{
-		auto& err = m_Errrors.emplace_back(error_code, file_path, file_buffer, buffer_size, token);
+		auto& err = m_Errrors.emplace_back(error_code, file_path, file_buffer, buffer_size, token, aditional_msg);
 		if (err.ErrorSeverity > m_Severity) { m_Severity = err.ErrorSeverity; }
 	}
 

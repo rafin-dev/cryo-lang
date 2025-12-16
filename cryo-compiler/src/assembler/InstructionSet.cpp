@@ -1,6 +1,8 @@
 #include "cryopch.h"
 #include "InstructionSet.h"
 
+#include "Instructions.h"
+
 namespace Cryo::Assembler {
 
   CryoOpcode InstructionSet::get_opcode(std::string_view instruction_str, const std::vector<TokenType>& params)
@@ -17,6 +19,11 @@ namespace Cryo::Assembler {
   bool InstructionSet::is_instruction(std::string_view token)
   {
     return s_InstructionList.contains(token);
+  }
+
+  uint32_t InstructionSet::get_params_size(CryoOpcode opcode)
+  {
+    return s_InstructionParamsSize[opcode];
   }
 
   std::map<std::pair<std::string_view, std::vector<TokenType>>, CryoOpcode> InstructionSet::s_Instructions = 
@@ -51,9 +58,17 @@ namespace Cryo::Assembler {
     "IMPL"
   };
 
-  //std::unordered_map<CryoOpcode, uint32_t> InstructionSet::s_InstrcutionSize = 
-  //{
-
-  //};
+  std::unordered_map<CryoOpcode, uint32_t> InstructionSet::s_InstructionParamsSize = 
+  {
+    { STLS,    0 },
+    { STLE,    0 },
+    { PUSH,    4 },
+    { POP,     4 },
+    { SETU32,  8 },
+    { SETSTR,  8 },
+    { RETURN,  0 },
+    { CALL_from_assembly_signature, 4 },
+    { IMPL,    4 }
+  };
 
 }

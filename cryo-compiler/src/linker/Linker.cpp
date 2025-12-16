@@ -1,3 +1,4 @@
+#include "assembler/InstructionSet.h"
 #include "assembler/Instructions.h"
 #include "cryopch.h"
 #include "Linker.h"
@@ -13,6 +14,7 @@
 #include <ios>
 #include <iterator>
 #include <limits>
+#include <string_view>
 
 namespace Cryo::Linker {
 
@@ -148,6 +150,12 @@ namespace Cryo::Linker {
         }
 
         functions.insert(std::pair(func.Signature, func));
+
+        if (m_FunctionSignatures.contains(func.Signature))
+        {
+          errors.push_error(ERR_L_SYMBOL_REDEFINITION, file_path, nullptr, 0, std::string_view(), std::format("Function [{}] has multiple definitions!", func.Signature)); 
+        }
+        m_FunctionSignatures.insert(func.Signature);
       }
     }
 
@@ -205,21 +213,22 @@ namespace Cryo::Linker {
     {
       switch (func.Instructions[i])
       {
-        case Assembler::PUSH:
-          i++;
-          break;
-
         case Assembler::SETSTR:
           i += 2;
-         
           func.Instructions[i] = m_OldStrIndexToNewStrIndex[file].at(func.Instructions[i]);
-
           break;
 
         case Assembler::CALL_from_assembly_signature:
-          i++;
-          func.Instructions[i] = m_OldStrIndexToNewStrIndex[file].at(func.Instructions[i]);
-
+          {
+            i++;
+            if (!m_FunctionSignatures.contains(m_OldStringLists[file].at(func.Instructions[i])))
+            {
+              error.push_error(ERR_L_UNRESOLVED_EXTERNAL_REFRENCE, file, nullptr, 0, std::string_view(),
+                  "Failed to find function: " + m_OldStringLists[file].at(func.Instructions[i]));
+              return;
+            }
+            func.Instructions[i] = m_OldStrIndexToNewStrIndex[file].at(func.Instructions[i]);
+          }
           break;
 
         case Assembler::IMPL:
@@ -228,8 +237,8 @@ namespace Cryo::Linker {
           break;
 
         default:
-          uint32_t instruction_parameters_size = 0;// TODO: get actual size
-          i += instruction_parameters_size;
+          uint32_t instruction_parameters_size = Assembler::InstructionSet::get_params_size((Assembler::CryoOpcode)func.Instructions[i]);
+          i += instruction_parameters_size / sizeof(uint32_t);
       }
     }
   }
