@@ -23,7 +23,7 @@ namespace Cryo::Assembler {
 		std::filesystem::path m_FilePath;
 
 		/// <summary>
-		/// Contains info about tokens that are specif keywords/characters such as: 'fn', ';', '->'
+		/// Contains info about tokens that are specific keywords/characters such as: 'fn', ';', '->'
 		/// </summary>
 		static const std::unordered_map<std::string_view, TokenType> s_TokenToType;
 	};

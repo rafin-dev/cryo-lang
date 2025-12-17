@@ -9,6 +9,7 @@
 #include <ostream>
 #include <spdlog/spdlog.h>
 #include <string_view>
+#include <vector>
 
 namespace Cryo::Assembler {
 
@@ -16,6 +17,32 @@ namespace Cryo::Assembler {
 		: m_Buffer(buffer), m_BufferSize(buffer_size), m_FilePath(path)
 	{
 	}
+
+   /*std::vector<Token> Tokenizer::tokenize(ErrorQueue& errors)
+   {
+     std::vector<Token> token_vec;
+     token_vec.reserve(1000); // This is like, 16kb so it's fine
+
+     for (uint32_t i = 0; i < m_BufferSize; i++)
+     {
+       TokenType type = TokenType::None;
+        switch (m_Buffer[i]) // Prepositions
+        {
+        case '#': // Comment
+          for (i++; m_Buffer[i] != '\n' && i < m_BufferSize; i++); // Skip comment
+          break;
+
+        case '$': // ID
+          type = TokenType::ID;
+          // Intended fallthrough
+        case '@': // Type
+          if (type == TokenType::None) { type = TokenType::Type; }
+          switch
+        }
+     }
+
+     return token_vec;
+   }*/
 
 	std::vector<Token> Tokenizer::tokenize(ErrorQueue& errors)
 	{
@@ -144,7 +171,8 @@ namespace Cryo::Assembler {
 		{ "->", TokenType::ReturnTypeDeclaration },
 		{ "{", TokenType::StartBody },
 		{ "}", TokenType::EndBody },
-		{ ";", TokenType::EndCommand }
+		{ ";", TokenType::EndCommand },
+      { ",", TokenType::Separator }
 	};
 
 	void Tokenizer::check_and_split_token_keyword(uint32_t token_index, std::vector<Token>& token_vec, ErrorQueue& errors)
