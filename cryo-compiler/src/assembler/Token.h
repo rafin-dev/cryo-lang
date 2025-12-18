@@ -20,10 +20,21 @@ namespace Cryo::Assembler {
 
 		Instruction, // PUSH, POP, CALL...
 		EndCommand, // ;
-      Separator, // ,
-		
-		Integer, // 1, 2, -1, -2...
-		Float, // 1.2, 1.3, 1.0...
+		Separator, // ,
+
+		U8,
+		U16,
+		U32,
+		U64,
+
+		I8,
+		I16,
+		I32,
+		I64,
+
+		F32,
+		F64, // 1.2, 1.3, 1.0...
+
 		StringLiteral // "foo", "bar"...
 	};
 

@@ -31,9 +31,9 @@ namespace Cryo::Assembler {
     { std::make_pair("STLS", std::vector<TokenType>{}), CryoOpcode::STLS },
     { std::make_pair("STLE", std::vector<TokenType>{}), CryoOpcode::STLE },
     { std::make_pair("PUSH", std::vector{ TokenType::Type, TokenType::ID }), CryoOpcode::PUSH },
-    { std::make_pair("POP",  std::vector{ TokenType::Integer }), CryoOpcode::POP },
+    { std::make_pair("POP",  std::vector{ TokenType::U32 }), CryoOpcode::POP },
    
-    { std::make_pair("SETU32", std::vector{ TokenType::ID, TokenType::Integer }), CryoOpcode::SETU32 },
+    { std::make_pair("SETU32", std::vector{ TokenType::ID, TokenType::U32 }), CryoOpcode::SETU32 },
 
     { std::make_pair("SETSTR", std::vector{ TokenType::ID, TokenType::StringLiteral }), CryoOpcode::SETSTR },
 

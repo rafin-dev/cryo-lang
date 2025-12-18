@@ -13,234 +13,232 @@
 
 namespace Cryo::Assembler {
 
-	Tokenizer::Tokenizer(const char* buffer, uint32_t buffer_size, const std::filesystem::path& path)
-		: m_Buffer(buffer), m_BufferSize(buffer_size), m_FilePath(path)
-	{
-	}
+	Tokenizer::Tokenizer(const char* buffer, uint32_t buffer_size, std::filesystem::path path)
+		: m_Buffer(buffer), m_BufferSize(buffer_size), m_FilePath(std::move(path)) {}
 
-   /*std::vector<Token> Tokenizer::tokenize(ErrorQueue& errors)
-   {
-     std::vector<Token> token_vec;
-     token_vec.reserve(1000); // This is like, 16kb so it's fine
-
-     for (uint32_t i = 0; i < m_BufferSize; i++)
-     {
-       TokenType type = TokenType::None;
-        switch (m_Buffer[i]) // Prepositions
-        {
-        case '#': // Comment
-          for (i++; m_Buffer[i] != '\n' && i < m_BufferSize; i++); // Skip comment
-          break;
-
-        case '$': // ID
-          type = TokenType::ID;
-          // Intended fallthrough
-        case '@': // Type
-          if (type == TokenType::None) { type = TokenType::Type; }
-          switch
-        }
-     }
-
-     return token_vec;
-   }*/
-
-	std::vector<Token> Tokenizer::tokenize(ErrorQueue& errors)
-	{
+	std::vector<Token> Tokenizer::tokenize(ErrorQueue& errors) const {
 		std::vector<Token> token_vec;
+		token_vec.reserve(1000); // This is like 16kb, so it's fine
 
-		for (uint32_t i = 0; i < m_BufferSize; i++)
-		{
-			char character = m_Buffer[i];
-			const char* token_start = nullptr;
-			uint32_t token_size = 0;
-      bool was_inserted = false;
+		for (uint32_t i = 0; i < m_BufferSize; i++) {
+			TokenType type = TokenType::None;
+			switch (m_Buffer[i]) {
+				case '#': // Comment
+					for (i++; i < m_BufferSize && m_Buffer[i] != '\n'; i++); // Skip comment
+					break;
 
-			// Separate 'words'
-			while (character != ' ' && character != '\n' && character != '\r' && character != '\t' && i < m_BufferSize)
-			{
-        if (character == '"')
-        {
-          token_start = m_Buffer + i + 1;
-          bool found_end = false;
-          for (i++; i < m_BufferSize; i++)
-          {
-            character = m_Buffer[i];
-            if (character == '"')
-            {
-              found_end = true;
-              break;
-            }
-            token_size++;
-          }
-          if (!found_end)
-          {
-            errors.push_error(ERR_A_STRING_LITERAL_MISSING_END, m_FilePath, m_Buffer, m_BufferSize, token_vec.back().tokenText);
-            return token_vec;
-          }
+				case '"': {
+						bool found_end = false;
+						const char* token_start = m_Buffer + i + 1; // remove the "
+						uint32_t token_size = 1;
+						for (i++; i < m_BufferSize; i++) {
+							if (m_Buffer[i] == '"') {
+								found_end = true;
+								break;
+							}
+							token_size++;
+						}
+						token_vec.emplace_back(TokenType::StringLiteral, std::string_view(token_start, token_size - 1));
+						if (!found_end) {
+							errors.push_error(ERR_A_STRING_LITERAL_MISSING_END, m_FilePath, m_Buffer, m_BufferSize, token_vec.back().tokenText);
+							return token_vec;
+						}
+					}
+					break;
 
-          token_vec.emplace_back(TokenType::StringLiteral, std::string_view(token_start, token_size));
-          was_inserted = true;
-          break;
-        }
+				case ',':
+					type = TokenType::Separator;
+				case ';':
+					if (type == TokenType::None) { type = TokenType::EndCommand; }
+				case '{':
+					if (type == TokenType::None) { type = TokenType::StartBody; }
+				case '}':
+					if (type == TokenType::None) { type = TokenType::EndBody; }
+					token_vec.emplace_back(type, std::string_view(m_Buffer + i, 1));
+					break;
 
-				if (!token_start) { token_start = m_Buffer + i; }
-				i++;
-				token_size++;
-				character = m_Buffer[i];
+
+				case '-':
+					if (i + 1 < m_BufferSize && m_Buffer[i + 1] == '>') {
+						token_vec.emplace_back(TokenType::ReturnTypeDeclaration, std::string_view(m_Buffer + i, 2));
+						i++;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, std::string_view(m_Buffer + i, 1));
+					}
+					break;
+
+				case 'f':
+					if (i + 1 < m_BufferSize && m_Buffer[i + 1] == 'n') {
+						token_vec.emplace_back(TokenType::FunctionDeclaration, std::string_view(m_Buffer + i, 2));
+						i++;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, std::string_view(m_Buffer + i, 1));
+					}
+					break;
+
+				case '@':
+					type = TokenType::Type;
+				case '$':
+					if (type == TokenType::None) { type = TokenType::ID; }
+					i = find_token_end(token_vec, type, i, errors);
+					break;
+
+				default:
+					if (m_Buffer[i] != ' ' && m_Buffer[i] != '\n' && m_Buffer[i] != '\r') {
+						i = find_token_end(token_vec, TokenType::None, i, errors);
+						Token& token = token_vec.back();
+
+						if (isdigit(token.tokenText[0])) { // TODO: Value like 10U32 5I32 3.32F32...
+							validate_value_token(token, errors);
+						}
+						else if (InstructionSet::is_instruction(token.tokenText)) { // Only option left is an instruction
+							token.type = TokenType::Instruction;
+						}
+						else {
+							errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+						}
+					}
+					break;
 			}
-			if (token_size == 0 || was_inserted) { continue; }
-
-			token_vec.emplace_back(TokenType::None, std::string_view(token_start, token_size));
-			uint32_t token = token_vec.size() - 1;
-
-			check_and_split_token_preposition(token, token_vec, errors);
-			if (errors.get_severity() == Error::level_critical) { return token_vec; }
 		}
 
 		return token_vec;
 	}
 
-	void Tokenizer::check_and_split_token_preposition(uint32_t token_index, std::vector<Token>& token_vec, ErrorQueue& errors)
-	{
-		for (uint32_t j = 0; j < token_vec[token_index].tokenText.size(); j++)
-		{
-			switch (token_vec[token_index].tokenText[j])
-			{
-			case '$':
-				if (j == 0)
-				{
-					token_vec[token_index].type = TokenType::ID;
-				}
-				else
-				{
-					token_vec.emplace_back(TokenType::ID, std::string_view(&token_vec[token_index].tokenText[j], token_vec[token_index].tokenText.size() - j));
-					uint32_t new_token = token_vec.size() - 1;
-					token_vec[token_index].tokenText = std::string_view(&token_vec[token_index].tokenText[j], token_vec[token_index].tokenText.data() + j);
-					check_and_split_token_preposition(new_token, token_vec, errors);
-					if (errors.get_severity() == Error::level_critical) { return; }
-				}
-				break;
+	uint32_t Tokenizer::find_token_end(std::vector<Token>& token_vec, TokenType type, uint32_t token_start, ErrorQueue &errors) const {
+		const char* txt_start = m_Buffer + token_start;
+		uint32_t token_size = 1;
 
-			case '@':
-				if (j == 0)
-				{
-					token_vec[token_index].type = TokenType::Type;
-				}
-				else
-				{
-					token_vec.emplace_back(TokenType::Type, std::string_view(&token_vec[token_index].tokenText[j], token_vec[token_index].tokenText.size() - j));
-					uint32_t new_token = token_vec.size() - 1;
-					token_vec[token_index].tokenText = std::string_view(&token_vec[token_index].tokenText[j], token_vec[token_index].tokenText.data() + j);
-					check_and_split_token_preposition(new_token, token_vec, errors);
-					if (errors.get_severity() == Error::level_critical) { return; }
-				}
-				break;
-
-			case ';':
-				if (j == 0)
-				{
-					token_vec[token_index].type = TokenType::EndCommand;
-					token_vec[token_index].tokenText = std::string_view(token_vec[token_index].tokenText.data(), 1);
-				}
-				else
-				{
-					token_vec.emplace_back(Token(TokenType::EndCommand, std::string_view(token_vec[token_index].tokenText.data() + j, 1)));
-
-					if (j != token_vec[token_index].tokenText.size() - 1)
-					{
-						token_vec.emplace_back(Token(TokenType::None, 
-							std::string_view(token_vec[token_index].tokenText.data() + j + 1, token_vec[token_index].tokenText.size() - j + 1)));
-						uint32_t new_token = token_vec.size() - 1;
-						check_and_split_token_preposition(new_token, token_vec, errors);
-						if (errors.get_severity() == Error::level_critical) { return; }
-					}
-
-					token_vec[token_index].tokenText = std::string_view(token_vec[token_index].tokenText.data(), j);
-				}
+		for (uint32_t i = token_start + 1; i < m_BufferSize; i++) {
+			if (m_Buffer[i] == ',' || m_Buffer[i] == ';' || m_Buffer[i] == ' ' || m_Buffer[i] == '\n') { // ID or Type token ended
 				break;
 			}
-		}
-		if (token_vec[token_index].type != TokenType::None) { return; }
 
-		check_and_split_token_keyword(token_index, token_vec, errors);
+			if (!isalnum(m_Buffer[i]) && m_Buffer[i] != '_' && m_Buffer[i] != ':' && m_Buffer[i] != '*') { // Invalid character in ID or Type
+				errors.push_error(ERR_A_INVALID_CHARACTER_IN_ID_OR_TYPE, m_FilePath, m_Buffer, m_BufferSize, std::string_view(txt_start, token_size));
+				break;
+			}
+
+			token_size++;
+		}
+		token_vec.emplace_back(type, std::string_view(txt_start, token_size));
+
+		return token_start + token_size - 1;
 	}
 
-	const std::unordered_map<std::string_view, TokenType> Tokenizer::s_TokenToType =
-	{
-		{ "fn", TokenType::FunctionDeclaration },
-		{ "->", TokenType::ReturnTypeDeclaration },
-		{ "{", TokenType::StartBody },
-		{ "}", TokenType::EndBody },
-		{ ";", TokenType::EndCommand },
-      { ",", TokenType::Separator }
-	};
-
-	void Tokenizer::check_and_split_token_keyword(uint32_t token_index, std::vector<Token>& token_vec, ErrorQueue& errors)
-	{
-		for (auto& tk : s_TokenToType)
-		{
-			size_t index = token_vec[token_index].tokenText.find(tk.first);
-			if (index == 0)
-			{
-				token_vec[token_index].type = tk.second;
-				return;
-			}
-			else if (index != std::string_view::npos)
-			{
-				token_vec.emplace_back(tk.second, std::string_view(&token_vec[token_index].tokenText[index], token_vec[token_index].tokenText.size() - index));
-				uint32_t new_token = token_vec.size() - 1;
-				token_vec[token_index].tokenText = std::string_view(token_vec[token_index].tokenText.data(), index);
-				if (token_vec[new_token].tokenText.size() > 1) { check_and_split_token_keyword(new_token, token_vec, errors); }
-				break;
-			}
-		}
-
-		// Check if token is of type value: int || float
-		{
-			bool is_numeric = true;
-			bool is_float = false;
-			for (char digit : token_vec[token_index].tokenText)
-			{
-				if (digit == '.')
-				{
-					if (is_float) // double dots: 1..2
-					{
-						errors.push_error(ERR_A_MULTIPLE_DOTS_IN_VALUE, m_FilePath, m_Buffer, m_BufferSize, token_vec[token_index].tokenText);
-						return;
-					}
-					is_float = true;
+	void Tokenizer::validate_value_token(Token &token, ErrorQueue &errors) const {
+		uint32_t digit_size = 0;
+		bool found_dot = false;
+		for (char c : token.tokenText) {
+			if (!isdigit(c)) {
+				if (found_dot) { break; }
+				if (c == '.') {
+					found_dot = true;
 				}
-				else if (!std::isdigit(digit))
-				{
-					is_numeric = false;
+				else {
 					break;
 				}
 			}
-			if (is_numeric)
-			{
-				if (is_float)
-				{
-					token_vec[token_index].type = TokenType::Float;
-				}
-				else
-				{
-					token_vec[token_index].type = TokenType::Integer;
-				}
-				return;
-			}
+			digit_size++;
 		}
-
-		// Check if token is instruction
-		{
-			if (InstructionSet::is_instruction(token_vec[token_index].tokenText))
-			{
-				token_vec[token_index].type = TokenType::Instruction;
-				return;
-			}
+		if (digit_size == token.tokenText.size()) {
+			errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+			return;
 		}
+		switch (token.tokenText[digit_size]) {
+			case 'u':
+				if (token.tokenText[digit_size + 1] == '8') {
+					if (token.tokenText.size() == digit_size + 2) {
+						token.type = TokenType::U8;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				else if (token.tokenText[digit_size + 1] == '1') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '6') {
+						token.type = TokenType::U16;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				else if (token.tokenText[digit_size + 1] == '3') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '2') {
+						token.type = TokenType::U32;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				else if (token.tokenText[digit_size + 1] == '6') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '4') {
+						token.type = TokenType::U64;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				break;
 
-		// Could not determine the token type
-		errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token_vec[token_index].tokenText);
+			case 'i':
+				if (token.tokenText[digit_size + 1] == '8') {
+					if (token.tokenText.size() == digit_size + 1) {
+						token.type = TokenType::I8;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				else if (token.tokenText[digit_size + 1] == '1') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '6') {
+						token.type = TokenType::I16;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				else if (token.tokenText[digit_size + 1] == '3') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '2') {
+						token.type = TokenType::I32;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				else if (token.tokenText[digit_size + 1] == '6') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '4') {
+						token.type = TokenType::I64;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				break;
+
+			case 'f':
+				if (token.tokenText[digit_size + 1] == '3') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '2') {
+						token.type = TokenType::F32;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				else if (token.tokenText[digit_size + 1] == '6') {
+					if (digit_size + 3 == token.tokenText.size() && token.tokenText[digit_size + 2] == '4') {
+						token.type = TokenType::F64;
+					}
+					else {
+						errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+					}
+				}
+				break;
+
+			default:
+				errors.push_error(ERR_A_COULD_NOT_DETERMINE_TOKEN_TYPE, m_FilePath, m_Buffer, m_BufferSize, token.tokenText);
+		}
 	}
-
 }

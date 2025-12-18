@@ -103,8 +103,20 @@ namespace Cryo::Assembler {
 		TokenType::EndCommand,
 		TokenType::ID,
 		TokenType::Type,
-		TokenType::Integer,
-		TokenType::Float,
+
+		TokenType::U8,
+		TokenType::U16,
+		TokenType::U32,
+		TokenType::U64,
+
+		TokenType::I8,
+		TokenType::I16,
+		TokenType::I32,
+		TokenType::I64,
+
+		TokenType::F32,
+		TokenType::F64,
+
 		TokenType::StringLiteral
 	};
 
@@ -122,7 +134,7 @@ namespace Cryo::Assembler {
 		int invalid_fn_count = 0;
 		bool found_valid_end = false;
 		Function func;
-    func.FunctionStart = function_start;
+		func.FunctionStart = function_start;
 		uint32_t current_token = function_start + 1; // Go from 'fn' to the id '$...'
 		for (; current_token < m_Tokens.size(); current_token++)
 		{
@@ -139,7 +151,7 @@ namespace Cryo::Assembler {
 		}
 		if (!found_valid_end)
 		{
-			PUSH_ERROR(errors, ERR_A_UNEXPECTED_END, current_token);
+			PUSH_ERROR(errors, ERR_A_FUNCTION_DEFINITION_MISSING_BODY, current_token);
 			return std::nullopt;
 		}
 		if (invalid_fn_count != 0)
@@ -305,7 +317,7 @@ namespace Cryo::Assembler {
 
       case CryoOpcode::POP:
         {
-          uint32_t count = std::stoul(std::string(m_Tokens[current_token].tokenText));
+          uint32_t count = std::stoul(std::string(m_Tokens[current_token].tokenText.data(), m_Tokens[current_token].tokenText.size() - 3)); // removes the u32
           func.Instructions.emplace_back(count);
           for (uint32_t i = 0; i < count; i++)
           {
@@ -329,7 +341,7 @@ namespace Cryo::Assembler {
           func.Instructions.emplace_back(data->Position);
           
           current_token++;
-          uint32_t value = std::stoul(std::string(m_Tokens[current_token].tokenText));
+          uint32_t value = std::stoul(std::string(m_Tokens[current_token].tokenText.data(), m_Tokens[current_token].tokenText.size() - 3));
           func.Instructions.emplace_back(value);
         }
         break;

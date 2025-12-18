@@ -41,18 +41,16 @@ namespace Cryo {
   };
 
 	Error::Error(std::string_view error_code, const std::filesystem::path& file_path, const char* file_buffer, uint32_t buffer_size, std::string_view token,
-      const std::string& aditional_msg)
-	{
+      const std::string& aditional_msg) {
+
 		// Validate error code
 		auto ite = s_ErrorTexts.find(error_code);
-		if (ite == s_ErrorTexts.end())
-		{
+		if (ite == s_ErrorTexts.end()) {
 			spdlog::critical("Catastrophic internal failure: Invalid Error code [{0}]!", error_code);
-			std::terminate(); // this problably means someone tried to magic string the code instead of using the defines
+			std::terminate(); // this probably means someone tried to magic string the code instead of using the defines
 		}
-		if (token.data() < file_buffer)
-		{
-        spdlog::critical("Catastrophic internal failure: Token is not part of file_buffer! {1} {0}", error_code, token);
+		if (token.data() < file_buffer) {
+			spdlog::critical("Catastrophic internal failure: Token is not part of file_buffer! {1} {0}", error_code, token);
 			std::terminate();
 		}
 
@@ -63,11 +61,9 @@ namespace Cryo {
     AditionalMessage = aditional_msg;
 
 		FilePath = file_path;
-    if (file_buffer == nullptr) // Linker errors do not have any file to show
-    {
+    if (file_buffer == nullptr) { // Linker errors do not have any file to show
       return;
     }
-
 		// Get the line and make a string_view for the token
 		const char* line_start = token.data();
 		while (line_start > file_buffer)
